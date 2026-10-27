@@ -95,9 +95,10 @@ def pi_event_source_id(session_id: str, event_id: str) -> str:
     _validate_identity_part("session_id", session_id)
     _validate_identity_part("event_id", event_id)
     source_id = f"pi:{quote(session_id, safe='')}:{quote(event_id, safe='')}"
-    if len(source_id) > MAX_SOURCE_ID_LENGTH:
-        raise ValueError(f"Pi event source_id must not exceed {MAX_SOURCE_ID_LENGTH} characters")  # noqa: TRY003
-    return source_id
+    if len(source_id) <= MAX_SOURCE_ID_LENGTH:
+        return source_id
+    canonical = json.dumps([session_id, event_id], ensure_ascii=False, separators=(",", ":"))
+    return "pi:h" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def parse_pi_session(value: PiSessionInput) -> tuple[PiEventInput, ...]:
