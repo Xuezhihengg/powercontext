@@ -832,9 +832,6 @@ class StatisticsApplication:
         )
 
 
-_INCREMENTAL_CHUNK_BYTES = 400
-
-
 class ScopedContextApplication:
     """Prepare final context for one scope using Runtime-owned source policy."""
 
@@ -873,17 +870,20 @@ class ScopedContextApplication:
     ) -> ContextPack | ContextPackDelta:
         """Prepare normal context as a full pack or a delta against a prior pack.
 
-        The leading chunk stops before the first Memory revision digit in the prepared
-        envelope, so the fixed trust header and first citation stay reusable while the
-        revision advances.
+        The target pack uses the public default chunking so an independent receiver can
+        rebuild the exact pack a caller would have produced with ``ContextPack.from_content``.
         """
 
         from powercontext.builtin.runtime.context_pack import ContextPack, ContextPackDelta
 
         prepared = await self.prepare(request)
-        target = ContextPack.from_content(prepared.content, chunk_bytes=_INCREMENTAL_CHUNK_BYTES)
+        target = ContextPack.from_content(prepared.content)
         if base_pack is None:
             return target
+        if isinstance(base_pack, (bytes, bytearray)):
+            # A receiver holds the serialized pack; accept it without requiring the caller
+            # to decode it first.
+            base_pack = ContextPack.from_bytes(bytes(base_pack))
         return ContextPackDelta.between(base_pack, target)
 
     async def _prepare(self, request: PrepareContextRequest, scope: ScopeDescriptor, /) -> PreparedContext:
