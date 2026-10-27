@@ -473,6 +473,11 @@ class ScopedSourceApplication:
         return await self._capture(value)
 
     async def _capture(self, value: CaptureSource, /, *, handoff_receipt: bool = False) -> SourceReceipt:
+        receipt = await self._capture_source(value, handoff_receipt=handoff_receipt)
+        self._runtime._wake_source_processing()
+        return receipt
+
+    async def _capture_source(self, value: CaptureSource, /, *, handoff_receipt: bool) -> SourceReceipt:
         if self._runtime._record_service is not None:
             try:
                 async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
@@ -532,11 +537,13 @@ class ScopedRecordApplication:
         /,
     ) -> SourceRecord:
         async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
-            return await self._runtime._records().create_source(
+            record = await self._runtime._records().create_source(
                 self.scope_id,
                 source_type,
                 content,
             )
+        self._runtime._wake_source_processing()
+        return record
 
     async def get_source(self, source_type: str, source_id: str, /) -> SourceRecord:
         async with self._runtime._scope_operation(self.scope_id):
@@ -564,7 +571,9 @@ class ScopedRecordApplication:
         /,
     ) -> ArtifactCreated:
         async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
-            return await self._runtime._records().create_artifact(self.scope_id, family, write)
+            created = await self._runtime._records().create_artifact(self.scope_id, family, write)
+        self._runtime._wake_source_processing()
+        return created
 
     async def get_artifact(self, family: str, artifact_id: str, /) -> ArtifactRecord:
         async with self._runtime._scope_operation(self.scope_id):
@@ -3156,6 +3165,23 @@ class BuiltinRuntime:
     async def capabilities(self) -> RuntimeCapabilities:
         async with self._operation():
             return self._capabilities
+
+    def _wake_source_processing(self) -> None:
+        """Publish a committed Journal mutation to the processing Supervisor."""
+
+        supervisor = self.artifact_processing_supervisor
+        if supervisor is None:
+            return
+        try:
+            supervisor.wake()
+        except Exception as error:
+            log_safely(
+                logger,
+                logging.WARNING,
+                "Artifact processing wake failed after Source publication",
+                exc_info=error,
+                extra={"event": "artifact_processing.wake_failed", "stage": "source_publication"},
+            )
 
     async def readiness(self) -> RuntimeReadiness:
         """Check whether the Runtime and its assembled dependencies can accept work."""
