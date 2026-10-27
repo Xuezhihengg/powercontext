@@ -1,0 +1,967 @@
+app:
+  name: 鲸落酒馆 · 老账房
+  description: 一个会跨会话记住你每件荒唐事的酒馆 NPC。由 Dify Chatflow 编排，PowerContext 记账与翻旧账。
+  icon: 🏮
+  icon_background: '#FFEAD5'
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.3.0
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - name: POWERCONTEXT_BASE_URL
+    description: PowerContext Server 地址，例如 http://127.0.0.1:8000
+    value: http://127.0.0.1:8000
+    value_type: string
+    selector:
+    - env
+    - POWERCONTEXT_BASE_URL
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 500
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 100
+        video_file_size_limit: 500
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: |-
+      🏮 欢迎来到「鲸落酒馆」。我是账房先生老周，怀里这本《鲸落账本》，记着每位旅人干过的荒唐事。
+      先报个名号（本次对话里一直用这个名字），然后每说一句话，就是你干的一件事——赊账、吹牛、往汤里加料都行。
+      下次再进来，只要还叫这个名号，我可都记得。
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 我把盐当成糖，倒进了麦酒桶
+    - 我赊了三杯麦酒，还把账本上的名字改成了隔壁老王
+    - 我今天是来道歉的，上次的麦酒钱我补上
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    nodes:
+    - id: '1001'
+      type: custom
+      position:
+        x: 80
+        y: 300
+      positionAbsolute:
+        x: 80
+        y: 300
+      width: 244
+      height: 130
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 开始
+        desc: 收集旅人名号；每轮聊天内容就是本轮动作
+        type: start
+        selected: false
+        variables:
+        - variable: player_name
+          label: 你的名号
+          description: 账本按名号记账。下次用同名再进店，老周就能翻出旧账。
+          type: text-input
+          required: true
+          max_length: 24
+          options: []
+    - id: '1002'
+      type: custom
+      position:
+        x: 380
+        y: 300
+      positionAbsolute:
+        x: 380
+        y: 300
+      width: 244
+      height: 160
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 整理输入
+        desc: ''
+        type: code
+        selected: false
+        code_language: python3
+        code: |
+          # ruff: noqa: RUF001
+          import json
+
+          MAX_PLAYER_CHARS = 24
+          MAX_ACTION_CHARS = 400
+          MAX_DEED_CHARS = 600
+
+
+          def main(arg_name: str, arg_action: str) -> dict:
+              player = " ".join((arg_name or "").split())[:MAX_PLAYER_CHARS].strip() or "无名旅人"
+              action = " ".join((arg_action or "").split())[:MAX_ACTION_CHARS].strip() or "我站在门口发呆"
+              scope_body = json.dumps(
+                  {
+                      "title": "鲸落酒馆账本 · " + player,
+                      "summary": "酒馆账房先生保存的玩家恶作剧、赊账与赖账记录",
+                      "idempotency_key": "tavern-ledger-v1:" + player,
+                  },
+                  ensure_ascii=False,
+              )
+              deed_text = ("玩家" + player + "：" + action)[:MAX_DEED_CHARS]
+              return {
+                  "player": player,
+                  "action": action,
+                  "scope_body": scope_body,
+                  "deed_text": deed_text,
+              }
+        variables:
+        - variable: arg_name
+          value_selector:
+          - '1001'
+          - player_name
+        - variable: arg_action
+          value_selector:
+          - sys
+          - query
+        outputs:
+          player:
+            type: string
+            children: null
+          action:
+            type: string
+            children: null
+          scope_body:
+            type: string
+            children: null
+          deed_text:
+            type: string
+            children: null
+    - id: '1003'
+      type: custom
+      position:
+        x: 680
+        y: 300
+      positionAbsolute:
+        x: 680
+        y: 300
+      width: 244
+      height: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 开账本 / 取账本
+        desc: ''
+        type: http-request
+        selected: false
+        method: post
+        url: '{{#env.POWERCONTEXT_BASE_URL#}}/v1/scopes'
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#1002.scope_body#}}'
+        authorization:
+          type: no-auth
+          config: null
+        timeout:
+          max_connect_timeout: 5000
+          max_read_timeout: 15000
+          max_write_timeout: 5000
+        retry_config:
+          retry_enabled: true
+          max_retries: 2
+          retry_interval: 1000
+        ssl_verify: true
+        variables: []
+        error_strategy: default-value
+        default_value:
+        - key: body
+          type: string
+          value: '{}'
+        - key: status_code
+          type: number
+          value: 0
+        - key: headers
+          type: object
+          value: {}
+        - key: files
+          type: array[object]
+          value: []
+    - id: '1004'
+      type: custom
+      position:
+        x: 980
+        y: 300
+      positionAbsolute:
+        x: 980
+        y: 300
+      width: 244
+      height: 180
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 解析账本
+        desc: ''
+        type: code
+        selected: false
+        code_language: python3
+        code: |
+          # ruff: noqa: RUF001
+          import json
+
+          CLAUSE_SEPARATORS = "，,。；;！!？?\n"
+
+
+          def focus(text: str) -> str:
+              current = []
+              for character in text or "":
+                  if character in CLAUSE_SEPARATORS:
+                      break
+                  current.append(character)
+              clause = "".join(current).strip()
+              return (clause or (text or "").strip())[:20]
+
+
+          def main(arg_body: str, arg_action: str, arg_player: str, arg_deed: str) -> dict:
+              try:
+                  payload = json.loads(arg_body or "{}")
+              except (TypeError, ValueError) as error:
+                  return {
+                      "scope_id": "",
+                      "has_scope": "no",
+                      "error_reason": ("无法解析 scope 响应：" + str(error))[:200],
+                      "search_body": "{}",
+                      "list_body": "{}",
+                      "remember_body": "{}",
+                  }
+              scope_id = str(payload.get("scope_id") or "").strip() if isinstance(payload, dict) else ""
+              if not scope_id:
+                  return {
+                      "scope_id": "",
+                      "has_scope": "no",
+                      "error_reason": "scope 响应中没有 scope_id",
+                      "search_body": "{}",
+                      "list_body": "{}",
+                      "remember_body": "{}",
+                  }
+              search_body = json.dumps(
+                  {"scope_id": scope_id, "query": focus(arg_action), "limit": 4, "mode": "auto"},
+                  ensure_ascii=False,
+              )
+              list_body = json.dumps(
+                  {"scope_id": scope_id, "query": arg_player, "limit": 20, "mode": "auto"},
+                  ensure_ascii=False,
+              )
+              remember_body = json.dumps(
+                  {
+                      "scope_id": scope_id,
+                      "kind": "tavern-deed",
+                      "text": arg_deed,
+                      "reason": "酒馆账本自动记账",
+                  },
+                  ensure_ascii=False,
+              )
+              return {
+                  "scope_id": scope_id,
+                  "has_scope": "yes",
+                  "error_reason": "",
+                  "search_body": search_body,
+                  "list_body": list_body,
+                  "remember_body": remember_body,
+              }
+        variables:
+        - variable: arg_body
+          value_selector:
+          - '1003'
+          - body
+        - variable: arg_action
+          value_selector:
+          - '1002'
+          - action
+        - variable: arg_player
+          value_selector:
+          - '1002'
+          - player
+        - variable: arg_deed
+          value_selector:
+          - '1002'
+          - deed_text
+        outputs:
+          scope_id:
+            type: string
+            children: null
+          has_scope:
+            type: string
+            children: null
+          error_reason:
+            type: string
+            children: null
+          search_body:
+            type: string
+            children: null
+          list_body:
+            type: string
+            children: null
+          remember_body:
+            type: string
+            children: null
+    - id: '1005'
+      type: custom
+      position:
+        x: 1280
+        y: 330
+      positionAbsolute:
+        x: 1280
+        y: 330
+      width: 244
+      height: 160
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 账本能用吗
+        desc: scope 创建失败时走错误提示，不继续查账
+        type: if-else
+        selected: false
+        logical_operator: and
+        cases:
+        - case_id: 'true'
+          id: 'true'
+          logical_operator: and
+          conditions:
+          - id: cond-scope-ok
+            variable_selector:
+            - '1004'
+            - has_scope
+            comparison_operator: is
+            value: 'yes'
+            varType: string
+    - id: '1006'
+      type: custom
+      position:
+        x: 1580
+        y: 240
+      positionAbsolute:
+        x: 1580
+        y: 240
+      width: 244
+      height: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 翻旧账
+        desc: ''
+        type: http-request
+        selected: false
+        method: post
+        url: '{{#env.POWERCONTEXT_BASE_URL#}}/v1/memory/search'
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#1004.search_body#}}'
+        authorization:
+          type: no-auth
+          config: null
+        timeout:
+          max_connect_timeout: 5000
+          max_read_timeout: 15000
+          max_write_timeout: 5000
+        retry_config:
+          retry_enabled: true
+          max_retries: 2
+          retry_interval: 1000
+        ssl_verify: true
+        variables: []
+    - id: '1013'
+      type: custom
+      position:
+        x: 1880
+        y: 240
+      positionAbsolute:
+        x: 1880
+        y: 240
+      width: 244
+      height: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 取整本账
+        desc: ''
+        type: http-request
+        selected: false
+        method: post
+        url: '{{#env.POWERCONTEXT_BASE_URL#}}/v1/memory/search'
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#1004.list_body#}}'
+        authorization:
+          type: no-auth
+          config: null
+        timeout:
+          max_connect_timeout: 5000
+          max_read_timeout: 15000
+          max_write_timeout: 5000
+        retry_config:
+          retry_enabled: true
+          max_retries: 2
+          retry_interval: 1000
+        ssl_verify: true
+        variables: []
+    - id: '1007'
+      type: custom
+      position:
+        x: 2180
+        y: 240
+      positionAbsolute:
+        x: 2180
+        y: 240
+      width: 244
+      height: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 整理旧账与好感度
+        desc: ''
+        type: code
+        selected: false
+        code_language: python3
+        code: |
+          # ruff: noqa: RUF001
+          import json
+
+          APOLOGY_WORDS = ("道歉", "对不起", "赔", "请客", "原谅", "补账", "认错", "还钱")
+          MAX_HITS = 8
+          TEXT_PREVIEW = 120
+
+
+          def collect(arg_body: str) -> list:
+              try:
+                  payload = json.loads(arg_body or "{}")
+              except (TypeError, ValueError):
+                  return []
+              raw_hits = payload.get("hits") if isinstance(payload, dict) else []
+              if not isinstance(raw_hits, list):
+                  return []
+              return [item for item in raw_hits if isinstance(item, dict)]
+
+
+          def main(arg_relevant_body: str, arg_list_body: str, arg_action: str) -> dict:
+              relevant = collect(arg_relevant_body)
+              listed = collect(arg_list_body)
+              merged = []
+              seen = set()
+              for hit in relevant + listed:
+                  text = str(hit.get("text") or "").strip()
+                  if not text or text in seen:
+                      continue
+                  seen.add(text)
+                  merged.append(hit)
+                  if len(merged) >= MAX_HITS:
+                      break
+              lines = []
+              excerpt = []
+              top_score = 0.0
+              for index, hit in enumerate(merged, start=1):
+                  text = str(hit.get("text") or "").strip()
+                  try:
+                      score = float(hit.get("score") or 0.0)
+                  except (TypeError, ValueError):
+                      score = 0.0
+                  top_score = max(top_score, score)
+                  lines.append(f"[{index}] {text[:TEXT_PREVIEW]}（相关度 {score:.3f}）")
+                  if len(excerpt) < 3:
+                      excerpt.append(text[:60])
+              apology = any(word in (arg_action or "") for word in APOLOGY_WORDS)
+              favor = max(5, min(100, 80 - 7 * len(merged) + (12 if apology else 0)))
+              if favor >= 75:
+                  grudge = "笑脸相迎"
+              elif favor >= 50:
+                  grudge = "皮笑肉不笑"
+              elif favor >= 25:
+                  grudge = "阴阳怪气"
+              else:
+                  grudge = "已经忍你很久了"
+              return {
+                  "memory_block": "\n".join(lines) or "（账本上还没有任何记录）",
+                  "hit_count": len(merged),
+                  "hit_count_text": str(len(merged)),
+                  "relevant_count": len(relevant),
+                  "relevant_count_text": str(len(relevant)),
+                  "top_score_text": f"{top_score:.3f}",
+                  "has_memory": "yes" if merged else "no",
+                  "favor": favor,
+                  "favor_text": str(favor) + "/100",
+                  "grudge_text": grudge,
+                  "excerpt": "；".join(excerpt) or "（无）",
+                  "mood_hint": (
+                      "账本上有旧账，你翻页的动作很熟练，语气里带着算总账的味道。"
+                      if merged
+                      else "账本是空的，你对这个生面孔还有一点耐心，但笔已经握在手里。"
+                  ),
+              }
+        variables:
+        - variable: arg_relevant_body
+          value_selector:
+          - '1006'
+          - body
+        - variable: arg_list_body
+          value_selector:
+          - '1013'
+          - body
+        - variable: arg_action
+          value_selector:
+          - '1002'
+          - action
+        outputs:
+          memory_block:
+            type: string
+            children: null
+          hit_count:
+            type: number
+            children: null
+          hit_count_text:
+            type: string
+            children: null
+          relevant_count:
+            type: number
+            children: null
+          relevant_count_text:
+            type: string
+            children: null
+          top_score_text:
+            type: string
+            children: null
+          has_memory:
+            type: string
+            children: null
+          favor:
+            type: number
+            children: null
+          favor_text:
+            type: string
+            children: null
+          grudge_text:
+            type: string
+            children: null
+          excerpt:
+            type: string
+            children: null
+          mood_hint:
+            type: string
+            children: null
+    - id: '1008'
+      type: custom
+      position:
+        x: 2480
+        y: 240
+      positionAbsolute:
+        x: 2480
+        y: 240
+      width: 244
+      height: 170
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 老周开口
+        desc: 按账本旧账与好感度生成台词
+        type: llm
+        selected: false
+        model:
+          provider: langgenius/openai/openai
+          name: gpt-4o-mini
+          mode: chat
+          completion_params:
+            temperature: 0.9
+        prompt_template:
+        - role: system
+          text: |-
+            你是「鲸落酒馆」的账房先生老周，怀里抱着一本从不离身的《鲸落账本》。
+            账本记着每位旅人干过的每一件荒唐事，你靠它收账、记仇，也靠它认人。
+
+            【旅人】{{#1002.player#}}
+            【本轮动作】{{#1002.action#}}
+            【账本检索】命中 {{#1007.hit_count_text#}} 条旧账：
+            {{#1007.memory_block#}}
+            【当前好感度】{{#1007.favor_text#}}（{{#1007.grudge_text#}}）
+            【你的心情】{{#1007.mood_hint#}}
+
+            说话规则：
+            1. 用市井、阴阳怪气、带账房术语的口吻（“记你一笔”“连本带利”“坏账”），每次 80~160 个汉字。
+            2. 只要账本里有旧账，就必须具体提到至少一条（复述玩家的原话或行为），并把它和本轮动作联系起来。
+            3. 如果本轮动作和某条旧账很像，要点明“你又来了”，再加一句夸张的“利息”。
+            4. 如果账本为空，就装大度，但暗示“你做的每件事我都会记下来”。
+            5. 不要编造账本里没有的具体旧事；不要输出好感度数字、列表或 Markdown。
+            6. 结尾用一句账房口吻的短句收束。
+        - role: user
+          text: '{{#1002.action#}}'
+        context:
+          enabled: false
+          variable_selector: []
+        vision:
+          enabled: false
+        variables: []
+    - id: '1009'
+      type: custom
+      position:
+        x: 2780
+        y: 240
+      positionAbsolute:
+        x: 2780
+        y: 240
+      width: 244
+      height: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 记你一笔
+        desc: ''
+        type: http-request
+        selected: false
+        method: post
+        url: '{{#env.POWERCONTEXT_BASE_URL#}}/v1/memory/remember'
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#1004.remember_body#}}'
+        authorization:
+          type: no-auth
+          config: null
+        timeout:
+          max_connect_timeout: 5000
+          max_read_timeout: 15000
+          max_write_timeout: 5000
+        retry_config:
+          retry_enabled: true
+          max_retries: 2
+          retry_interval: 1000
+        ssl_verify: true
+        variables: []
+    - id: '1010'
+      type: custom
+      position:
+        x: 3080
+        y: 240
+      positionAbsolute:
+        x: 3080
+        y: 240
+      width: 244
+      height: 240
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 生成账本回执
+        desc: ''
+        type: code
+        selected: false
+        code_language: python3
+        code: |
+          # ruff: noqa: RUF001
+          import json
+
+
+          def main(
+              arg_remember_body: str,
+              arg_scope: str,
+              arg_relevant: str,
+              arg_hits,
+              arg_score: str,
+              arg_favor_text: str,
+              arg_grudge: str,
+              arg_excerpt: str,
+          ) -> dict:
+              entry_note = "未入账（见服务日志）"
+              try:
+                  payload = json.loads(arg_remember_body or "{}")
+                  entry = payload.get("entry") if isinstance(payload, dict) else None
+                  citation = entry.get("citation") if isinstance(entry, dict) else None
+                  entry_id = str((citation or {}).get("entry_id") or "").strip()
+                  if entry_id:
+                      entry_note = entry_id[:24] + "…（kind: tavern-deed）"
+                  elif isinstance(payload, dict) and payload.get("memory"):
+                      entry_note = "重复旧账，已合并（未新增）"
+              except (TypeError, ValueError):
+                  pass
+              footer = (
+                  "\n\n---\n"
+                  "🏮 鲸落酒馆 · 账本回执\n"
+                  "玩家账本：" + str(arg_scope) + "\n"
+                  "本轮检索：相关 "
+                  + str(arg_relevant)
+                  + " 条 / 账本共 "
+                  + str(arg_hits)
+                  + " 条（最高相关度 "
+                  + str(arg_score)
+                  + "）\n"
+                  "本轮入账：" + entry_note + "\n"
+                  "好感度：" + str(arg_favor_text) + " · " + str(arg_grudge) + "\n"
+                  "账本摘录：" + str(arg_excerpt)
+              )
+              return {"footer": footer}
+        variables:
+        - variable: arg_remember_body
+          value_selector:
+          - '1009'
+          - body
+        - variable: arg_scope
+          value_selector:
+          - '1004'
+          - scope_id
+        - variable: arg_relevant
+          value_selector:
+          - '1007'
+          - relevant_count_text
+        - variable: arg_hits
+          value_selector:
+          - '1007'
+          - hit_count
+        - variable: arg_score
+          value_selector:
+          - '1007'
+          - top_score_text
+        - variable: arg_favor_text
+          value_selector:
+          - '1007'
+          - favor_text
+        - variable: arg_grudge
+          value_selector:
+          - '1007'
+          - grudge_text
+        - variable: arg_excerpt
+          value_selector:
+          - '1007'
+          - excerpt
+        outputs:
+          footer:
+            type: string
+            children: null
+    - id: '1011'
+      type: custom
+      position:
+        x: 3380
+        y: 240
+      positionAbsolute:
+        x: 3380
+        y: 240
+      width: 244
+      height: 200
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 回答
+        desc: ''
+        type: answer
+        selected: false
+        answer: '{{#1008.text#}}{{#1010.footer#}}'
+        variables: []
+    - id: '1012'
+      type: custom
+      position:
+        x: 1580
+        y: 520
+      positionAbsolute:
+        x: 1580
+        y: 520
+      width: 244
+      height: 160
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 账本坏了
+        desc: ''
+        type: answer
+        selected: false
+        answer: |-
+          😵 「账本今天被猫抓花了……」老周把账本合上，假装什么都没发生。
+
+          （PowerContext scope 创建失败：{{#1004.error_reason#}}）
+        variables: []
+    edges:
+    - id: 1001-source-1002-target
+      source: '1001'
+      sourceHandle: source
+      target: '1002'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: 1002-source-1003-target
+      source: '1002'
+      sourceHandle: source
+      target: '1003'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+    - id: 1003-source-1004-target
+      source: '1003'
+      sourceHandle: source
+      target: '1004'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: 1004-source-1005-target
+      source: '1004'
+      sourceHandle: source
+      target: '1005'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: code
+        targetType: if-else
+        isInIteration: false
+        isInLoop: false
+    - id: 1005-true-1006-target
+      source: '1005'
+      sourceHandle: 'true'
+      target: '1006'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: if-else
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+    - id: 1006-source-1013-target
+      source: '1006'
+      sourceHandle: source
+      target: '1013'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: http-request
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+    - id: 1013-source-1007-target
+      source: '1013'
+      sourceHandle: source
+      target: '1007'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: 1007-source-1008-target
+      source: '1007'
+      sourceHandle: source
+      target: '1008'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: code
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: 1008-source-1009-target
+      source: '1008'
+      sourceHandle: source
+      target: '1009'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: llm
+        targetType: http-request
+        isInIteration: false
+        isInLoop: false
+    - id: 1009-source-1010-target
+      source: '1009'
+      sourceHandle: source
+      target: '1010'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: 1010-source-1011-target
+      source: '1010'
+      sourceHandle: source
+      target: '1011'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: code
+        targetType: answer
+        isInIteration: false
+        isInLoop: false
+    - id: 1005-false-1012-target
+      source: '1005'
+      sourceHandle: 'false'
+      target: '1012'
+      targetHandle: target
+      type: custom
+      data:
+        sourceType: if-else
+        targetType: answer
+        isInIteration: false
+        isInLoop: false
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7
