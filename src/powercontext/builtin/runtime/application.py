@@ -248,6 +248,7 @@ from powercontext.builtin.runtime.recall_sufficiency import (
     build_recall_candidates,
     recall_effort,
 )
+from powercontext.builtin.runtime.source_lifecycle import SourceLifecycleApplication
 from powercontext.builtin.runtime.statistics import RelationalScopedStatistics, overview_selection
 from powercontext.builtin.scope import ScopeApplication, ScopeDescriptor, ScopeSelection
 from powercontext.builtin.scope.subject_sources import SubjectSourceService
@@ -2700,6 +2701,7 @@ class ScopedTopicMemoryApplication:
                     query_embedding,
                     embedding_timeout_seconds,
                 )
+        result = await self._hide_lifecycle_topics(result)
         observer = self._runtime._topic_memory_search_observer
         if observer is not None:
             try:
@@ -2811,7 +2813,34 @@ class ScopedTopicMemoryApplication:
         if not 1 <= limit <= 100:
             raise InvalidRuntimeRequestError("topic-memory-browse-limit")
         async with self._runtime._scoped_operation(self.scope_id):
-            return await self._runtime._topic_memory_browse(self.scope_id, limit=limit, after=after)
+            items = await self._runtime._topic_memory_browse(self.scope_id, limit=limit, after=after)
+        return await self._hide_lifecycle_browse(items)
+
+    async def _hide_lifecycle_topics(self, result: TopicMemorySearchResult) -> TopicMemorySearchResult:
+        lifecycle = self._runtime.lifecycle
+        if lifecycle is None or not result.hits:
+            return result
+        hidden = await lifecycle.hidden_topic_refs(self.scope_id)
+        if not hidden:
+            return result
+        hits = tuple(
+            hit for hit in result.hits if (hit.artifact_ref.artifact_id, hit.artifact_ref.revision) not in hidden
+        )
+        return result if len(hits) == len(result.hits) else result.model_copy(update={"hits": hits})
+
+    async def _hide_lifecycle_browse(
+        self,
+        items: tuple[TopicMemoryCurrentItem, ...],
+    ) -> tuple[TopicMemoryCurrentItem, ...]:
+        lifecycle = self._runtime.lifecycle
+        if lifecycle is None:
+            return items
+        hidden = await lifecycle.hidden_topic_refs(self.scope_id)
+        if not hidden:
+            return items
+        return tuple(
+            item for item in items if (item.artifact_ref.artifact_id, item.artifact_ref.revision) not in hidden
+        )
 
     async def flush(self) -> TopicMemoryFlushResult:
         if not self._runtime._topic_memory_processing_available or self._runtime._topic_memory_flush is None:
@@ -3144,6 +3173,7 @@ class BuiltinRuntime:
         self.memory = MemoryApplication(self)
         self.topic_memory = TopicMemoryApplication(self)
         self.records = RecordApplication(self)
+        self.lifecycle: SourceLifecycleApplication | None = None
         self.prompts = PromptApplication(self)
         self.review = ReviewApplication(self)
         self.skill = SkillApplication(self)
