@@ -123,6 +123,7 @@ python dify/scripts/seed_tavern.py \
 
 ### 5.4 名号、会话与 scope 的对应关系
 
+- Chatflow 的开始节点带有 `player_name` 变量，运行页会先弹出「你的名号」表单；提交后进入聊天，每次点「新对话」都会重新填一次名号。
 - Dify 开始变量 `player_name` = 玩家名号，只在一次对话内固定。
 - 代码节点把名号清洗后拼成 `idempotency_key = tavern-ledger-v1:<名号>`。
 - PowerContext 对同一 `idempotency_key` 幂等返回同一个 `scope_id`，所以“新对话 + 同名号”仍然命中同一本账。
