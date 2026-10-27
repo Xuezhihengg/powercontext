@@ -855,7 +855,12 @@ class ScopedContextApplication:
         ):
             raise InvalidRuntimeRequestError("context-assembly-entry-limit")
         async with self._runtime._scope_operation(self.scope_id) as scope:
-            if request.assembly is not None and not request.assembly.sections and not request.include_code:
+            if (
+                request.assembly is not None
+                and not request.assembly.sections
+                and not request.include_code
+                and not request.evidence_selection
+            ):
                 return PreparedContextBuilder().empty()
             if authorize_scopes is not None:
                 await authorize_scopes((self.scope_id, *scope.context_references))

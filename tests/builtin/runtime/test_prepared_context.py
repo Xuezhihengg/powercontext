@@ -836,6 +836,87 @@ def test_omission_counting_leaves_rendered_content_and_origins_unchanged() -> No
     )
 
 
+def test_evidence_selection_returns_literal_window_with_aligned_origins() -> None:
+    prefix = "General administrative notes. " * 60
+    text = prefix + "The cobalt sensor is calibrated at 37 degrees."
+    hits = (_hit("alpha", text), _hit("beta", prefix + "The amber valve opens at 19 degrees."))
+    request = PrepareContextRequest(query="cobalt sensor calibrated", max_bytes=1200, evidence_selection=True)
+    build = PreparedContextBuilder().build_scopes_result(
+        request=request,
+        current_scope_id="scope",
+        memory_candidates=(PreparedMemoryCandidates("scope", MEMORY_REF, hits),),
+    )
+
+    assert build.context.content is not None
+    assert build.context.content_bytes == len(build.context.content.encode("utf-8")) <= 1200
+    (fragment,) = build.fragments
+    assert fragment.address.entry_id == "alpha"
+    assert fragment.text == text[fragment.start : fragment.end]
+    assert "37 degrees." in fragment.text
+    assert build.origins == (fragment.address,)
+    items = json.loads(build.context.content.splitlines()[-2])["items"]
+    assert len(items) == len(build.fragments) == len(build.origins) == 1
+    assert items[0]["content"] == fragment.text
+    assert items[0]["start"] == fragment.start
+    assert items[0]["end"] == fragment.end
+    assert items[0]["citation"] == {
+        "scope_id": "scope",
+        "memory_ref": MEMORY_REF.model_dump(mode="json"),
+        "entry_id": "alpha",
+        "entry_version_id": "alpha-v1",
+    }
+
+
+def test_evidence_selection_keeps_cross_scope_identity() -> None:
+    hits = (_hit("remote", "The remote constraint remains active."),)
+    build = PreparedContextBuilder().build_scopes_result(
+        request=PrepareContextRequest(query="remote constraint", max_bytes=1200, evidence_selection=True),
+        current_scope_id="current",
+        memory_candidates=(PreparedMemoryCandidates("remote", MEMORY_REF, hits),),
+    )
+
+    (fragment,) = build.fragments
+    assert fragment.address.memory.scope_id == "remote"
+    assert fragment.address.memory.artifact == MEMORY_REF
+
+
+def test_evidence_selection_default_off_keeps_ordinary_prepare() -> None:
+    hits = (_hit("history", "Literal history " * 40),)
+    candidates = (PreparedMemoryCandidates("scope", MEMORY_REF, hits),)
+    builder = PreparedContextBuilder()
+    baseline = builder.build_scopes_result(
+        request=PrepareContextRequest(query="literal", max_bytes=1200),
+        current_scope_id="scope",
+        memory_candidates=candidates,
+    )
+    default = builder.build_scopes_result(
+        request=PrepareContextRequest(query="literal", max_bytes=1200, evidence_selection=False),
+        current_scope_id="scope",
+        memory_candidates=candidates,
+    )
+
+    assert baseline == default
+    assert baseline.fragments == ()
+
+
+def test_evidence_selection_returns_empty_when_the_envelope_cannot_fit() -> None:
+    build = PreparedContextBuilder().build_scopes_result(
+        request=PrepareContextRequest(query="literal", max_bytes=512, evidence_selection=True),
+        current_scope_id="scope",
+        memory_candidates=(PreparedMemoryCandidates("scope", MEMORY_REF, (_hit("history", "Literal history."),)),),
+    )
+
+    assert build.context.status == "empty"
+    assert build.context.content is None
+    assert build.fragments == ()
+
+
+@pytest.mark.parametrize("value", ["true", 1, None])
+def test_evidence_selection_requires_a_json_boolean(value) -> None:
+    with pytest.raises(ValidationError):
+        PrepareContextRequest.model_validate({"query": "budget", "evidence_selection": value})
+
+
 def _code_candidates(count: int = 5) -> tuple[PreparedCodeCandidate, ...]:
     content = "def budget():\n    return '预算'\n"
     return tuple(

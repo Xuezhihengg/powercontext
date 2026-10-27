@@ -28,6 +28,12 @@ from powercontext.builtin.artifacts.memory.models import MemoryCitation, MemoryH
 from powercontext.builtin.artifacts.profile.models import Profile
 from powercontext.builtin.artifacts.topic_memory import TopicMemory, TopicMemorySearchHit
 from powercontext.builtin.runtime.errors import PreparedContextInvariantError
+from powercontext.builtin.runtime.evidence_selection import (
+    EvidenceSelection,
+    MemoryEntryAddress,
+    PreparedMemoryFragment,
+    select_evidence,
+)
 from powercontext.builtin.runtime.models import PrepareContextRequest, PreparedContext
 from powercontext.builtin.runtime.prepared_code import (
     CodeEvidenceRef,
@@ -106,15 +112,7 @@ class PreparedContextBuild:
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
-
-
-@dataclass(frozen=True)
-class MemoryEntryAddress:
-    """Identify one exact Memory entry version across Scope boundaries."""
-
-    memory: ArtifactAddress
-    entry_id: str
-    entry_version_id: str
+    fragments: tuple[PreparedMemoryFragment, ...] = ()
 
 
 PreparedContextOrigin = MemoryCitation | ArtifactRef | MemoryEntryAddress | ArtifactAddress
@@ -211,6 +209,9 @@ class PreparedContextBuilder:
         profile_candidates: Sequence[PreparedProfileCandidate] = (),
         code_candidates: Sequence[PreparedCodeCandidate] = (),
     ) -> PreparedContextBuild:
+        if request.evidence_selection:
+            return self._build_evidence(request=request, memory_candidates=memory_candidates)
+
         if request.include_code:
 
             def historical(history_request: PrepareContextRequest, entries: int) -> PreparedContextBuild:
@@ -256,6 +257,36 @@ class PreparedContextBuilder:
             omissions=omissions,
         )
 
+    def _build_evidence(
+        self,
+        *,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> PreparedContextBuild:
+        selection = self._evidence_selection(request=request, memory_candidates=memory_candidates)
+        if selection.content is None:
+            return PreparedContextBuild(context=self.empty(), origins=())
+        content_bytes = len(selection.content.encode("utf-8"))
+        if content_bytes > request.max_bytes:
+            raise PreparedContextInvariantError("output-budget")
+        return PreparedContextBuild(
+            context=PreparedContext(status="ready", content=selection.content, content_bytes=content_bytes),
+            origins=tuple(fragment.address for fragment in selection.fragments),
+            fragments=selection.fragments,
+        )
+
+    def _evidence_selection(
+        self,
+        *,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> EvidenceSelection:
+        return select_evidence(
+            query=request.query,
+            memory_candidates=memory_candidates,
+            max_bytes=request.max_bytes,
+        )
+
     def probe_budget(
         self,
         *,
@@ -274,8 +305,19 @@ class PreparedContextBuilder:
 
         Pure and side-effect free: no I/O, no persistence, nothing reported to any sink, and
         the same inputs as :meth:`build_scopes_result` are guaranteed to yield the same
-        counters because both go through :meth:`_select_entries`.
+        counters because both go through the same selection path.
         """
+
+        if request.evidence_selection:
+            selection = self._evidence_selection(request=request, memory_candidates=memory_candidates)
+            content_bytes = 0 if selection.content is None else len(selection.content.encode("utf-8"))
+            return RecallBudgetView(
+                max_bytes=request.max_bytes,
+                delivered_items=len(selection.fragments),
+                truncated_items=0,
+                dropped_items=0,
+                unused_bytes=max(0, request.max_bytes - content_bytes),
+            )
 
         content, origins, omissions = self._select_entries(
             request=request,
@@ -307,9 +349,9 @@ class PreparedContextBuilder:
         """Run one complete pure selection pass and render it.
 
         Returns ``(content, origins, omissions)``; ``content`` is ``None`` exactly when nothing
-        was selected, which is the empty-result case for both paths. This is the single
-        selection path shared by :meth:`build_scopes_result` and :meth:`probe_budget`, so the
-        probe's counters always describe the selection the build would actually perform.
+        was selected, which is the empty-result case for both paths. This is the selection
+        path shared by the ordinary :meth:`build_scopes_result` and :meth:`probe_budget`
+        flows; evidence selection reaches :func:`select_evidence` directly.
         """
 
         if request.assembly is not None:
