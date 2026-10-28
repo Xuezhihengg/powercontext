@@ -69,6 +69,22 @@ minimax/
 `run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**。
 step0 内部的顺序是「只读检查依赖 → 只读检查密钥 → 备份现有 `evidence/` 到 `.evidence_backup/<时间戳>/` → 才复位工作区并重建证据目录」，所以缺依赖（exit 70）、缺 Key（exit 2）都在任何写动作之前退出；即使流程走到 step8 之后才失败（例如 MiniMax 账户 402、模型名下线），上一次证据也已先备份，可按脚本打印的命令原样还原。`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
 
+### 1.2 评审最短验收路径（6 条命令，约 5 分钟；逐条在干净环境彩排中实测过，见「技术使用记录」4c 的 R1–R10）
+
+```bash
+cd minimax
+bash scripts/bootstrap.sh && source .venv/bin/activate                        # R1 装依赖
+(cd demo_project && python -m pytest tests -q -o addopts=)                     # R2 → 14 passed
+mkdir -p /tmp/pc_before && tar -xzf samples/pristine/demo_project.tar.gz -C /tmp/pc_before
+(cd /tmp/pc_before/demo_project && python -m pytest tests -q -o addopts=)      # R3 → 6 failed, 8 passed
+python3 scripts/check_evidence.py evidence demo_project; echo "exit=$?"        # R4 → exit 0，38 项全 PASS
+export MINIMAX_API_KEY=<你的 Key>; bash scripts/run_demo.sh; echo "exit=$?"    # R9 → exit 0（12 步 + 自检）
+```
+
+- R2 是验收项⑥的「修改后目标 + 回归全过」，R3 是「修改前功能性失败」（改前基线快照，不动仓库）；R4 一次跑完 ①②③④⑤⑥ 六项的 38 条机械判定。
+- 最后一条没有密钥时也安全：裸跑会在 step0 门禁 `exit 2`，`evidence/` 与 `demo_project/` 一字未改（R5/R10 实测），想离线看 step1–7 用 `ALLOW_PARTIAL_RUN=1`。
+- 文档按需深入：`验证样例.md`（T-001 十二步逐条预期）、`技术使用记录.md`（开发记录 + 返工 + 彩排）、`一页技术说明.md`（架构与验收映射）。
+
 ---
 
 ## 2. 环境要求
