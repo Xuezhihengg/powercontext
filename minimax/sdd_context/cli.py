@@ -149,6 +149,10 @@ def cmd_patch(args: argparse.Namespace) -> int:
         "endpoint": run["request_log"]["endpoint"],
         "context_markdown": run["request_log"]["context_markdown"],
         "raw_model_output": run["raw_response"],
+        "model_answer": run["answer"],
+        "finish_reason": run["request_log"]["finish_reason"],
+        "elapsed_ms": run["request_log"]["elapsed_ms"],
+        "attempts": run["request_log"]["attempts"],
         "apply_result": {**result, "changed": [{**item, "diff": item.get("diff", "")[:200] + "…" if len(item.get("diff", "")) > 200 else item.get("diff", "")} for item in result["changed"]]},
         "usage": run["request_log"].get("usage"),
     }

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # 验证样例一键流程：导入 → 上下文 → 规格更新 → 上下文更新 → MiniMax 修改 → 测试验证 → 状态复用。
 # 每步产物落盘到 evidence/，命令与退出码记录在 evidence/run_transcript.log（开发记录）。
+# 退出码：0=全部通过（含 step13 自检）；1=有非预期失败步骤或自检 FAIL；2=缺 MINIMAX_API_KEY；70=依赖未就绪。
 #
 # 可覆盖环境变量：
 #   EVIDENCE_DIR=evidence          证据输出目录（彩排时可指向临时目录）
 #   SDD_DATA_DIR=.sdddata          seekdb 数据目录
 #   FRESH_PC=1                     先清空 PowerContext 库并重启 Server（演示“空状态起步”）；FRESH_PC=0 保留现有状态
 #   MINIMAX_API_KEY=...            必填（step8 真实调用 MiniMax）
+#   MINIMAX_MODEL / MINIMAX_MAX_TOKENS / MINIMAX_ATTEMPTS  MiniMax 调用参数（默认 MiniMax-M3）
 set -uo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck disable=SC1091
@@ -47,7 +49,27 @@ run_expected_fail() {
   return 0
 }
 
-say "== 0. 重置样例数据（业务工程回到初始快照）=="
+say "== 0. 前置检查 + 重置样例数据（业务工程回到初始快照）=="
+# preflight：先确认命令行依赖齐全，再清空证据目录——
+# 否则一旦 sddctx/powercontext 不在 PATH（未跑 bootstrap.sh 或未激活虚拟环境），
+# 后面每步都是 exit 127，而本步骤已经把上一次的 evidence/ 删掉了。
+PREFLIGHT=0
+for tool in sddctx powercontext python3 curl; do
+  if command -v "${tool}" >/dev/null 2>&1; then
+    say "  ok   ${tool} -> $(command -v "${tool}")"
+  else
+    say "  MISS ${tool}：请先运行 bash scripts/bootstrap.sh，并激活它创建的 .venv（见 README）"
+    PREFLIGHT=1
+  fi
+done
+if ! python3 -c "import pyseekdb, httpx, pytest" >/dev/null 2>&1; then
+  say "  MISS 依赖导入失败（pyseekdb/httpx/pytest）：请运行 bash scripts/bootstrap.sh"
+  PREFLIGHT=1
+fi
+if [[ ${PREFLIGHT} -ne 0 ]]; then
+  say "!! 前置检查未通过，已中止；evidence/ 未改动。退出码 70。"
+  exit 70
+fi
 restore_pristine_demo_project
 if [[ "${DATA_DIR}" != "${EVIDENCE_DIR}" ]]; then rm -rf "${DATA_DIR}"; fi
 rm -rf "${EVIDENCE_DIR}"
