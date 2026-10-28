@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>知栈 StudyStack · 本地优先的课程笔记复习助手</title>
+<meta name="description" content="用 Qoder 开发、以 OceanBase seekdb 嵌入式引擎做库内混合检索的课程笔记复习助手。笔记解析、向量化、检索与掌握度记录全部留在本机。" />
+<meta property="og:title" content="知栈 StudyStack · 本地优先的课程笔记复习助手" />
+<meta property="og:description" content="浏览器本地向量化 + seekdb 单条 SQL 混合检索 + 薄弱点复习。笔记不上云。" />
+<meta property="og:image" content="./assets/03-search.jpg" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236ea8fe'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='%230b1020' font-family='sans-serif'>知</text></svg>" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="glow glow-a" aria-hidden="true"></div>
+<div class="glow glow-b" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="#top">
+    <span class="brand-mark">知</span>
+    <span class="brand-name">知栈 <em>StudyStack</em></span>
+  </a>
+  <nav class="nav-links">
+    <a href="#pain">痛点</a>
+    <a href="#features">功能</a>
+    <a href="#engine">检索原理</a>
+    <a href="#metrics">实测</a>
+    <a href="#run">复现</a>
+    <a class="nav-cta" href="https://github.com/Xuezhihengg/powercontext" target="_blank" rel="noreferrer">源码仓库</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="badges">
+      <span class="badge">Qoder 开发</span>
+      <span class="badge">seekdb 嵌入式</span>
+      <span class="badge">WebGPU 本地向量化</span>
+      <span class="badge badge-muted">笔记不上云</span>
+    </div>
+    <h1>把散落的课程笔记<br />变成能<span class="hl">被问到</span>的知识库</h1>
+    <p class="lede">
+      知栈 StudyStack 是一个本地优先的课程笔记复习助手：导入 Markdown / TXT 笔记，
+      在浏览器里算好向量，交给 <strong>OceanBase seekdb</strong> 用一条 SQL 完成全文 + 向量的混合检索，
+      再把每次命中的知识点沉淀成掌握度，下次先复习薄弱点。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#run">查看运行步骤</a>
+      <a class="btn btn-ghost" href="#features">功能与截图</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>12</b><span>篇示例笔记一键导入</span></div>
+      <div class="stat"><b>22.9MB</b><span>本地 q8 向量模型</span></div>
+      <div class="stat"><b>39ms</b><span>端到端检索实测</span></div>
+      <div class="stat"><b>0</b><span>条数据离开本机</span></div>
+    </div>
+    <figure class="hero-shot reveal">
+      <img src="./assets/03-search.jpg" alt="知栈 StudyStack 混合检索界面" />
+      <figcaption>混合检索：得分、原文、来源文件与分块号，顶部显示向量化 / seekdb 检索 / 总耗时</figcaption>
+    </figure>
+  </section>
+
+  <section id="pain" class="section">
+    <div class="section-head">
+      <span class="kicker">Why</span>
+      <h2>期末复习时真正卡住的三件事</h2>
+    </div>
+    <div class="cards three">
+      <article class="card">
+        <div class="icon">🔍</div>
+        <h3>知识点找不到</h3>
+        <p>笔记散在十几个 Markdown / TXT 里，只记得“好像在哪篇写过”，关键词又对不上原句。</p>
+      </article>
+      <article class="card">
+        <div class="icon">🫥</div>
+        <h3>薄弱点说不清</h3>
+        <p>刷过的题、看过的段落没有留下痕迹，第二遍复习仍然从第一页开始。</p>
+      </article>
+      <article class="card">
+        <div class="icon">🔒</div>
+        <h3>不敢往云端传</h3>
+        <p>课程笔记、实验数据往往不便上传；通用笔记软件又缺少库内的向量检索能力。</p>
+      </article>
+    </div>
+    <p class="answer">知栈的答案：<strong>本地解析 + 本地向量化 + 库内混合检索 + 可追踪的掌握度</strong>。</p>
+  </section>
+
+  <section id="features" class="section">
+    <div class="section-head">
+      <span class="kicker">Features</span>
+      <h2>四个 tab 覆盖完整复习闭环</h2>
+    </div>
+    <div class="cards four">
+      <article class="card">
+        <div class="icon">🗂️</div>
+        <h3>多课程知识库</h3>
+        <p>每门课一个 seekdb collection，新建 / 切换 / 删除，实时显示文档数、分块数与向量维度。</p>
+      </article>
+      <article class="card">
+        <div class="icon">📥</div>
+        <h3>导入即向量化</h3>
+        <p>支持 .md / .txt / .json，按句子边界分块（大小、重叠可调），示例笔记一键导入。</p>
+      </article>
+      <article class="card">
+        <div class="icon">⚡</div>
+        <h3>库内混合检索</h3>
+        <p>全文 ngram + HNSW 向量 + RRF 融合全部在 seekdb 单条 SQL 内完成，应用层不重排。</p>
+      </article>
+      <article class="card">
+        <div class="icon">🧠</div>
+        <h3>薄弱点驱动复习</h3>
+        <p>结果可加入复习并标记 会 / 模糊 / 不会，薄弱点 Top 5 按掌握度排序，一键跳回原文。</p>
+      </article>
+    </div>
+
+    <div class="gallery">
+      <figure class="reveal">
+        <img src="./assets/02-import.jpg" alt="导入示例笔记完成的界面" />
+        <figcaption><b>导入</b>：12 篇机器学习示例笔记走同一套分块 → 向量化 → 写入 seekdb 的流程，逐篇显示分块数。</figcaption>
+      </figure>
+      <figure class="reveal">
+        <img src="./assets/04-review.jpg" alt="薄弱知识点界面" />
+        <figcaption><b>复习</b>：薄弱知识点 Top 5 + 全部复习记录，掌握度颜色区分，复习次数与时间来自 SQL 表。</figcaption>
+      </figure>
+      <figure class="reveal wide">
+        <img src="./assets/01-courses.jpg" alt="课程管理界面" />
+        <figcaption><b>课程</b>：collection 级隔离，卡片直接给出文档数、分块数与 512 维向量配置；课程 ID 仅允许字母、数字与下划线。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="engine" class="section">
+    <div class="section-head">
+      <span class="kicker">Engine</span>
+      <h2>一次检索，一条 SQL，三种信号</h2>
+      <p class="section-sub">
+        向量在浏览器里算，检索在数据库里做。服务端只负责把参数装进 <code>@search_parm</code>，
+        再由 <code>DBMS_HYBRID_SEARCH.GET_SQL</code> 生成并执行真正的混合检索语句。
+      </p>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step">
+        <span class="flow-idx">01</span>
+        <h4>浏览器向量化</h4>
+        <p>Web Worker 里跑 Transformers.js，模型 <code>Xenova/bge-small-zh-v1.5</code>，512 维 q8，
+          WebGPU 优先、失败降级 WASM。</p>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-step">
+        <span class="flow-idx">02</span>
+        <h4>服务端拼参</h4>
+        <p>把查询文本、查询向量与 RRF 参数写入 <code>SET @search_parm</code>，调用
+          <code>DBMS_HYBRID_SEARCH.GET_SQL</code>。</p>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-step">
+        <span class="flow-idx">03</span>
+        <h4>seekdb 库内融合</h4>
+        <p>ngram 全文 + HNSW cosine 近邻 + RRF 融合在同一句 SQL 里，返回得分与原文。</p>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-step">
+        <span class="flow-idx">04</span>
+        <h4>沉淀掌握度</h4>
+        <p>命中结果写入 <code>review_progress</code> 表，薄弱点与复习次数都用 SQL 查询排序。</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-head">
+        <span>server/seekdb.mjs</span>
+        <button class="copy" type="button">复制</button>
+      </div>
+<pre><code>parm.query = { query_string: { fields: ['document'], query: cleanText } };
+parm.knn   = { field: 'embedding', k: 40, query_vector: queryVector };
+parm.rank  = { rrf: { rank_window_size: 64, rank_constant: 60 } };
+parm.size  = topK;
+
+await c.execute('SET @search_parm = ?', [JSON.stringify(parm)]);
+const rows = await c.execute(
+  `SELECT DBMS_HYBRID_SEARCH.GET_SQL('${table}', @search_parm) as q FROM dual`
+);
+// 执行生成的 SQL（嵌入式构建去掉 APPROXIMATE 走精确扫描，RRF 融合仍在库内）</code></pre>
+    </div>
+
+    <div class="cards two">
+      <article class="card">
+        <h3>为什么检索要放在库里</h3>
+        <p>全文召回、向量近邻、融合排序如果拆到应用层，就要把候选集反复搬进内存并自己实现 RRF。
+          seekdb 的 <code>DBMS_HYBRID_SEARCH</code> 把三件事压进一句 SQL，排序语义由数据库保证，应用层只做映射。</p>
+      </article>
+      <article class="card">
+        <h3>为什么向量要放在浏览器</h3>
+        <p>模型与笔记都不离开本机：模型由本地 <code>/models</code> 静态托管（<code>allowRemoteModels=false</code>），
+          服务端只收到向量与文本，天然规避了“笔记上传云端”的顾虑。</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="metrics" class="section">
+    <div class="section-head">
+      <span class="kicker">Numbers</span>
+      <h2>本机实测（macOS arm64 · Chrome WebGPU）</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>项目</th><th>结果</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>模型加载</td><td><b>WebGPU · q8 · 22.9MB</b></td><td>顶栏常驻徽标，来自 Worker 上报的真实后端与体积</td></tr>
+          <tr><td>示例导入</td><td><b>12 个分块</b></td><td>12 篇机器学习笔记，每篇 1 个分块</td></tr>
+          <tr><td>查询向量化</td><td><b>29ms</b></td><td>浏览器 Worker 内完成</td></tr>
+          <tr><td>seekdb 混合检索</td><td><b>10ms</b></td><td>单条 SQL：全文 + 向量 + RRF</td></tr>
+          <tr><td>端到端</td><td><b>39ms</b></td><td>输入问题到结果渲染</td></tr>
+          <tr><td>冒烟测试</td><td><b>15 项全 PASS</b></td><td>建课、导入、增量、检索、掌握度、课程隔离</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">耗时随机器与浏览器波动；无 WebGPU 时自动降级 WASM，结果一致但更慢。</p>
+  </section>
+
+  <section id="run" class="section">
+    <div class="section-head">
+      <span class="kicker">Reproduce</span>
+      <h2>三步跑起来</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="step-idx">1</span>
+        <div>
+          <h4>准备模型与依赖</h4>
+          <div class="code-block small">
+            <div class="code-head"><span>terminal</span><button class="copy" type="button">复制</button></div>
+<pre><code>cd qoder/app
+npm install
+# 模型放到 app/models/Xenova/bge-small-zh-v1.5（约 159MB，q8 实际加载 22.9MB）
+huggingface-cli download Xenova/bge-small-zh-v1.5 \
+  --local-dir models/Xenova/bge-small-zh-v1.5</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-idx">2</span>
+        <div>
+          <h4>启动 API 与前端</h4>
+          <div class="code-block small">
+            <div class="code-head"><span>terminal</span><button class="copy" type="button">复制</button></div>
+<pre><code>npm run dev      # API 8787 + Vite 5173
+open http://localhost:5173</code></pre>
+          </div>
+          <p class="hint">顶部出现 <code>WebGPU · q8 · 22.9MB</code> 即模型就绪。</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-idx">3</span>
+        <div>
+          <h4>按样例走一遍</h4>
+          <ol class="checklist">
+            <li>课程管理 → 新建 <code>ml_basics</code> → 切换为当前课程</li>
+            <li>导入笔记 → 导入示例笔记（机器学习 12 篇）→ 提示 <em>成功导入 12 个示例分块</em></li>
+            <li>检索 <code>过拟合太严重应该怎么缓解</code> → Top 3 命中 决策树 / 正则化 / 偏差方差</li>
+            <li>三条结果加入复习 → 薄弱点页标记 不会 / 不会 / 会 → Top 5 顺序随之变化</li>
+          </ol>
+          <p class="hint">命令行等价验证：<code>node scripts/smoke.mjs</code>，预期 <em>All tests PASSED</em>。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <span class="kicker">Stack</span>
+      <h2>技术构成</h2>
+    </div>
+    <div class="stack">
+      <div class="chip"><b>Vite 6</b><span>前端构建</span></div>
+      <div class="chip"><b>TypeScript</b><span>原生 DOM，无框架</span></div>
+      <div class="chip"><b>Transformers.js 3.7.5</b><span>Web Worker 内向量化</span></div>
+      <div class="chip"><b>Express 4</b><span>10 个 HTTP 接口</span></div>
+      <div class="chip"><b>seekdb 1.4.0</b><span>嵌入式存储 + 混合检索</span></div>
+      <div class="chip"><b>Qoder CLI</b><span>全程编码与修复</span></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-main">
+    <div class="brand">
+      <span class="brand-mark">知</span>
+      <span class="brand-name">知栈 <em>StudyStack</em></span>
+    </div>
+    <p>本地优先的课程笔记复习助手 · Qoder × OceanBase 赛题作品</p>
+    <div class="footer-links">
+      <a href="https://github.com/Xuezhihengg/powercontext" target="_blank" rel="noreferrer">GitHub 仓库</a>
+      <a href="https://github.com/Xuezhihengg/powercontext/tree/2026-competition-ecosystem/qoder" target="_blank" rel="noreferrer">qoder/ 目录</a>
+      <a href="https://www.oceanbase.com/softwarecenter/community" target="_blank" rel="noreferrer">OceanBase seekdb</a>
+    </div>
+  </div>
+  <div class="footer-meta">
+    <span>Qoder 账号 UID：01a18344-30a7-7d75-9bad-c037d0c83971</span>
+    <span>2026 · 用 Qoder 开发，用 seekdb 检索</span>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox-close" type="button" aria-label="关闭">×</button>
+  <img alt="" />
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>
