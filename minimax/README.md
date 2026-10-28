@@ -70,9 +70,10 @@ minimax/
 cd minimax
 
 # ① 建环境（有 uv 用 uv，没有则自动退回 python3 -m venv）
-bash scripts/bootstrap.sh
+bash scripts/bootstrap.sh                     # 装到 minimax/.venv（含 sddctx 与 powercontext）
 source .venv/bin/activate
-export PATH="$HOME/.local/bin:$PATH"          # uv tool 安装 powercontext 时需要
+# 若你选择用 uv tool 独立安装 powercontext（落在 ~/.local/bin），补一句：
+# export PATH="$HOME/.local/bin:$PATH"
 
 # ② 启 PowerContext Server（状态库落在 minimax/.pcserver/home）
 bash scripts/start_server.sh                  # 停止：bash scripts/stop_server.sh

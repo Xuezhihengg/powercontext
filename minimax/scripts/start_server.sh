@@ -14,7 +14,7 @@ if ! command -v powercontext >/dev/null 2>&1; then
   exit 1
 fi
 export POWERCONTEXT_HOME="${POWERCONTEXT_HOME:-$(pwd)/.pcserver/home}"
-echo "PowerContext Server: http://127.0.0.1:${PC_PORT}"
+echo "PowerContext Server: http://127.0.0.1:${PC_PORT}（就绪检查 /health/ready，超时 60s）"
 echo "  数据目录: ${POWERCONTEXT_HOME}（日志 .pcserver/server.log）"
 setsid powercontext server run --host 127.0.0.1 --port "${PC_PORT}" --env-file .pcserver/powercontext.env \
   > .pcserver/server.log 2>&1 &
