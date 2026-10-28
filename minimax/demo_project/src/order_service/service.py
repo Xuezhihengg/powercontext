@@ -1,6 +1,7 @@
-"""订单服务门面（v1）。
+"""订单服务门面（v2）。
 
-当前版本仅支持按客户过滤（SPEC-order-query ORD-001~003、SPEC-order-core ORD-CORE-003）。
+当前版本支持按客户过滤，并可按状态与金额下限过滤
+（SPEC-order-query ORD-001~005、SPEC-order-core ORD-CORE-003）。
 """
 
 from __future__ import annotations
@@ -48,10 +49,30 @@ def get_order(order_id: str, repository: InMemoryOrderRepository | None = None) 
     return order
 
 
-def list_orders(customer_id: str, repository: InMemoryOrderRepository | None = None) -> list[Order]:
-    """按客户查询订单（ORD-001）。v1 仅支持 customer_id 过滤。"""
+def list_orders(
+    customer_id: str,
+    repository: InMemoryOrderRepository | None = None,
+    status: str | None = None,
+    min_amount: int | None = None,
+) -> list[Order]:
+    """按客户查询订单，可选按状态和金额下限过滤（ORD-001/ORD-004/ORD-005）。"""
+    normalized_status: str | None = None
+    if status is not None:
+        if not isinstance(status, str):
+            raise ValueError(f"INVALID_STATUS: unknown order status {status!r}")
+        candidate_status = status.strip().lower()
+        if candidate_status:
+            if candidate_status not in STATUS_SET:
+                raise ValueError(f"INVALID_STATUS: unknown order status {status!r}")
+            normalized_status = candidate_status
+
     repo = repository or _default_repository
-    return repo.list_by_customer(customer_id)
+    orders = repo.list_by_customer(customer_id)
+    if normalized_status is not None:
+        orders = [order for order in orders if order.status == normalized_status]
+    if min_amount is not None:
+        orders = [order for order in orders if order.total_amount >= min_amount]
+    return orders
 
 
 def refund_order(order_id: str, refund_amount: int, repository: InMemoryOrderRepository | None = None) -> Order:
