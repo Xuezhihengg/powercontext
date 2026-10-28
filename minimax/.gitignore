@@ -1,0 +1,13 @@
+# 运行环境与本地数据（不提交）
+.venv/
+.sdddata/
+.pcserver/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+# 本地临时
+*.local.env
+MINIMAX_API_KEY*
