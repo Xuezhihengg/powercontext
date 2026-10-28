@@ -28,14 +28,14 @@ minimax/
 │   ├── patcher.py             ← 上下文白名单校验、备份、写盘、统一 diff
 │   ├── verify.py              ← 运行目标/回归测试并留痕（命令、退出码、代码版本）
 │   └── __main__.py            ← python -m sdd_context 等价入口
-├── demo_project/              ← 被测业务工程「订单服务」（初始为规格 v1 的实现）
-│   ├── specs/                 ← 3 份规格：SPEC-order-query(v1) / SPEC-order-core / SPEC-refund-boundary
+├── demo_project/              ← 被测业务工程「订单服务」。**提交态 = MiniMax 改后版本**（见下方「提交态与初始态」）
+│   ├── specs/                 ← 3 份规格：SPEC-order-query（提交态为 v2，含 ORD-004/005）/ SPEC-order-core / SPEC-refund-boundary
 │   ├── src/order_service/     ← models.py / repository.py / service.py
 │   └── tests/                 ← test_order_filter_target.py（目标）+ test_orders_regression.py（回归）
 ├── samples/
 │   ├── task-T001.md           ← 验证样例的任务描述
 │   ├── spec_update/SPEC-order-query.md  ← 规格 v2（新增 ORD-004/ORD-005）
-│   └── pristine/demo_project.tar.gz     ← 业务工程初始快照（脚本靠它复现，不依赖 git 状态）
+│   └── pristine/demo_project.tar.gz     ← 业务工程**改前基线**（规格 v1 + 未实现过滤的 service.py）
 ├── scripts/
 │   ├── bootstrap.sh           ← 建 .venv 并安装依赖
 │   ├── start_server.sh        ← 启 PowerContext Server（127.0.0.1:18081）
@@ -48,6 +48,19 @@ minimax/
 ```
 
 运行期生成的本地目录（已在 `minimax/.gitignore` 中忽略）：`.venv/`、`.sdddata/`（seekdb 数据）、`.pcserver/`（PowerContext 数据与日志）。
+
+### 1.1 提交态与初始态（先读这段，避免误判测试结果）
+
+题面写的是「代码结果以评审实际执行的测试为准」，所以**仓库里提交的 `demo_project/` 是 step8 由 MiniMax 改完之后的版本**（规格 v2 + 带 `status`/`min_amount` 过滤的实现）。两个状态都在仓库内交付，核对方式如下：
+
+| 想看什么 | 命令 | 预期 |
+|---|---|---|
+| 改后代码（= 仓库提交态）测试全过 | `cd demo_project && python -m pytest tests -q -o addopts=` | **14 passed**（目标 6 + 回归 8） |
+| 改前代码（初始基线）目标测试功能性失败 | `mkdir -p /tmp/pc_before && tar -xzf samples/pristine/demo_project.tar.gz -C /tmp/pc_before && cd /tmp/pc_before/demo_project && python -m pytest tests/test_order_filter_target.py -q -o addopts=` | **6 failed**（`TypeError: list_orders() got an unexpected keyword argument 'status'`）；同目录回归测试 **8 passed** |
+| 完整复现「改前失败 → MiniMax 真实改 → 改后全过 → 自检 38 PASS」 | `bash scripts/run_demo.sh`（step0 会先 `restore_pristine_demo_project()`） | 退出码 0 |
+| 把仓库工作区也回到改前基线 | `bash scripts/reset.sh`（不动 `evidence/`） | `demo_project/` = v1，`rm -rf .sdddata` |
+
+`run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**；`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
 
 ---
 
@@ -82,7 +95,8 @@ bash scripts/start_server.sh                  # 停止：bash scripts/stop_serve
 # ③ 跑完整验证样例（12 步，产出 evidence/）
 export MINIMAX_API_KEY=<你的 MiniMax Key>
 bash scripts/run_demo.sh
-echo "exit=$?"                               # 0 = 12 步全过 且 step13 验收自检通过
+echo "exit=$?"                               # 0 = 12 步全过 且 step13 验收自检 38 项全 PASS
+# 退出码：0 全过；2 缺 MINIMAX_API_KEY；70 依赖未就绪（step0 前置自检会打印缺哪个命令）；1 有异常步骤或自检 FAIL
 ```
 
 `run_demo.sh` 的 **step13 会自己核对六项验收**（`scripts/check_evidence.py`，38 项 PASS/FAIL），不需要人工读日志：
@@ -106,8 +120,9 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 |---|---|---|
 | `MINIMAX_API_KEY` | 无（必填） | MiniMax 鉴权，只在运行时读取，不落盘、不写入证据 |
 | `MINIMAX_BASE_URL` | `https://api.minimaxi.com/v1` | OpenAI 兼容端点前缀 |
-| `MINIMAX_MODEL` | `MiniMax-M2.1` | 代码修改模型 |
-| `MINIMAX_MAX_TOKENS` / `MINIMAX_TIMEOUT` | `16000` / `600` | 生成上限 / 请求超时 |
+| `MINIMAX_MODEL` | `MiniMax-M3` | 代码修改模型。MiniMax 开放平台已于 2026 年下线 M2.x，请求旧模型名会返回 404；可下单的模型名以 `GET /v1/models` 为准 |
+| `MINIMAX_MAX_TOKENS` / `MINIMAX_TIMEOUT` | `24000` / `900` | 生成上限 / 请求超时。MiniMax-M3 是「先思考再作答」的推理模型，思考与答案共用这段预算，太小会被 `finish_reason=length` 截断 |
+| `MINIMAX_ATTEMPTS` / `MINIMAX_TEMPERATURE` | `2` / `0.1` | 解析失败或被截断时的自动修复重试次数 / 采样温度 |
 | `POWERCONTEXT_URL` | `http://127.0.0.1:18081` | 状态通道地址（CLI 也可用 `--pc-url`） |
 | `POWERCONTEXT_PORT` | `18081` | `start_server.sh` 监听端口 |
 | `POWERCONTEXT_HOME` | `minimax/.pcserver/home` | PowerContext 全部本地数据目录（脚本已自动设置） |
@@ -125,7 +140,7 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 | `sddctx ingest` | 导入或增量更新工程资料 | `--project --data-dir --out` | `docs_total/added/updated/unchanged/removed/count_in_seekdb` |
 | `sddctx context` | 生成开发上下文（核心能力） | `--project --data-dir --task-file --out --markdown-out --top-k [--no-state]` | `task/applicable_specs/code_targets/verification_tests/task_state/retrieval/provenance` |
 | `sddctx dbq` | 直接查 seekdb（演示数据库参与检索） | `--data-dir --kind spec\|code\|test --text --top-k --out` | 命中 id + metadata + 完整查询日志 |
-| `sddctx patch` | 用 MiniMax 按上下文改代码 | `--project --data-dir --task-file [--instruction] [--dry-run] --out --diff-out` | 模型原始输出、请求日志、diff、备份路径 |
+| `sddctx patch` | 用 MiniMax 按上下文改代码 | `--project --data-dir --task-file [--instruction] [--dry-run] --out --diff-out` | 送模型的上下文、模型原始输出与答案、`usage`/`finish_reason`/每次尝试耗时、diff、备份路径 |
 | `sddctx verify` | 跑目标+回归测试并留痕 | `--project [--target] [--regression ...] --label before\|after --out-dir --out` | 每套用例的命令/退出码/代码哈希/输出 |
 | `sddctx state save` | 写任务状态到 PowerContext | `--task-file --phase --done --todo --results-file --notes --out` | scope_id + 请求文本 + Server 响应 |
 | `sddctx state show` | 从 PowerContext 回读最新状态 | `--task-id --out` | `scope_id/latest{phase,done,todo,results,...}` |
@@ -141,6 +156,7 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 | `3` | `state show`：该任务在 PowerContext 中还没有记录（空状态） |
 | `4` | `context`：`provenance.missing` 非空，即输出的来源无法核对 |
 | `5` | `patch`：模型输出没有造成任何文件改动 |
+| `70` | `run_demo.sh`：step0 前置自检发现 `sddctx`/`powercontext`/依赖不可用（此时 `evidence/` 未被改动） |
 
 `patch` 另有硬约束：只允许写「上下文里出现的代码文件」，越界路径、新增文件、改测试/改规格一律被 `patcher.py` 拒绝。
 
@@ -149,13 +165,14 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 ```bash
 cd minimax && source .venv/bin/activate && export PATH="$HOME/.local/bin:$PATH"
 bash scripts/start_server.sh
+bash scripts/reset.sh            # 关键：本节的命令假设从「改前基线」开始（仓库提交态是改后代码）
 
 # 数据库实际参与：看 seekdb 里到底存了什么、查得到什么
 sddctx init --data-dir .sdddata --out /tmp/init.json
 sddctx ingest --project demo_project --data-dir .sdddata --out /tmp/ingest.json
 sddctx dbq --data-dir .sdddata --kind spec --text "订单 状态 金额 过滤" --out /tmp/dbq.json
 
-# 上下文正确：v1 规格下不应出现 ORD-004/ORD-005
+# 上下文正确：重置后规格为 v1，不应出现 ORD-004/ORD-005
 sddctx context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --no-state
 
 # 规格更新后重新导入：必须出现 ORD-004/ORD-005
@@ -189,21 +206,30 @@ python3 scripts/check_evidence.py evidence
 | `step5_ingest_specv2.json` | 上下文正确 | 规格 v2 增量摄取：`added=2 updated=1` |
 | `step6_context_specv2.{json,md}` | 上下文正确 | 同一任务重新检索，出现 ORD-004/ORD-005 |
 | `step7_state_planned.json`、`step10_state_verified.json` | 状态能够复用 | 规划/验证两个阶段写入 PowerContext |
-| `step8_minimax_run.json` | MiniMax 实际参与 | 送模型的完整上下文、模型原始输出、usage、diff、备份位置 |
+| `step8_minimax_run.json` | MiniMax 实际参与 | 送模型的完整上下文（`context_markdown`）、模型原始输出（`raw_model_output`，含推理模型的思考段）、剥离思考后的答案（`model_answer`）、`usage`/`finish_reason`/`elapsed_ms`/`attempts`、diff、备份位置 |
 | `step8_code_diff.patch`、`code_before/`、`code_after/` | MiniMax 实际参与 / 代码修改有效 | 与提交代码逐行对应的差异 |
 | `step9_verify_after.json`、`logs/pytest_after_*.log`、`step9_code_after.tar.gz` | 代码修改有效 | 修改后目标 + 回归全部通过 |
 | `step11_state_show_after.json`、`step11_context_final.{json,md}` | 状态能够复用 | 重启 Server 后新进程回读状态，且状态进入后续上下文 |
 | `step12_dbq_*.json` | 数据库实际参与 | 三类资料（spec/code/test）的真实检索结果与查询语句 |
+| `step12_seekdb_dir.txt` | 数据库实际参与 | 运行当时的 seekdb 数据目录快照（`du -sh`、文件数、最大的数据文件、manifest 概览）。`.sdddata/` 运行当时 567M（23 个文件）且不入库、`reset.sh` 会清空，这份文本快照保证「库里真有数据」在不重跑时也能核对 |
 | （step13 输出在 transcript 末尾） | 全部 6 项 | `check_evidence.py` 的 38 项 PASS/FAIL 结论，逐条对应题面验收条件 |
 
 ## 8. 重置
 
 ```bash
-bash scripts/reset.sh              # 业务工程回到初始快照 + 清空 seekdb；保留 PowerContext 状态（演示复用）
+bash scripts/reset.sh              # 业务工程回到改前基线 + 清空 seekdb；保留 PowerContext 状态（演示复用）
 bash scripts/reset.sh --pc-reset   # 连 PowerContext 任务状态一起清空，回到完全空状态
 ```
 
-`evidence/` 不会被 `reset.sh` 删除（重跑 `run_demo.sh` 才会覆盖）。
+`evidence/` 不会被 `reset.sh` 删除（重跑 `run_demo.sh` 才会覆盖），`samples/pristine/demo_project.tar.gz` 也不会被改动，随时可以再恢复回改后态：
+
+```bash
+cp -f evidence/code_after/src/order_service/service.py demo_project/src/order_service/service.py
+cp -f samples/spec_update/SPEC-order-query.md          demo_project/specs/SPEC-order-query.md
+python3 scripts/check_evidence.py evidence demo_project   # 38 项仍应全 PASS
+```
+
+> `check_evidence.py` 的「改后代码落到工作区/归档」一项在两种工作区状态下都成立：工作区等于 `code_after` 时直接通过；工作区已被 `reset.sh` 恢复成 `code_before` 时，改为核对 `evidence/step9_code_after.tar.gz` 与 `code_after/` 一致。
 
 ## 9. 已知限制与常见问题
 
@@ -213,6 +239,7 @@ bash scripts/reset.sh --pc-reset   # 连 PowerContext 任务状态一起清空�
 4. **`verify` 依赖 `demo_project/tests` 内的 `conftest.py`** 注入 `src` 路径；不要改 `pytest.ini` 的 `testpaths`。
 5. **step1 的 exit 3 与 step3 的 exit 1 是预期结果**，脚本不计入异常步骤；`run_demo.sh` 的总退出码只反映真实异常。
 6. **端口 18081 被占用**：`POWERCONTEXT_PORT=18082 bash scripts/start_server.sh`，同时 `export POWERCONTEXT_URL=http://127.0.0.1:18082`。
-7. **MiniMax Key**：使用大赛赠送的 MiniMax Token Plan Key（`MINIMAX_API_KEY`）。作品不内置任何密钥，也不读取本地缓存文件。
+7. **MiniMax Key 与模型名**：`MINIMAX_API_KEY` 只在运行时从环境变量读取，作品不内置任何密钥、不写入证据文件（`grep -rl sk-api evidence/` 为空）。报 404 `The model ... is no longer available` = 模型名已下线（换 `MiniMax-M3`）；报 402 `insufficient balance (1008)` = 该 Key 是按量付费 Key 且账户无余额，需改用大赛赠送 Token Plan 对应的订阅 Key 或充值，程序会把 MiniMax 返回的状态码与错误体原样打印出来（不含 Key），便于区分这两类问题。
 8. **seekdb 本地数据目录较大**：`.sdddata/seekdb.db/`（嵌入式实例的数据目录，本次样例约 200–300MB）与 `.pcserver/home` 都在 `minimax/` 内且已被 `.gitignore` 忽略；`bash scripts/reset.sh` 会清掉它们，重跑自动重建。
-9. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。
+9. **推理模型的回答格式**：MiniMax-M3 把思考写在 `message.content` 的 think 标签块里、答案在块之后；`minimax_client._strip_think()` 先剥思考，再按「围栏代码块 / 整段文本 / 括号配对扫描」三级解析约定的 files JSON。解析不出来或 `finish_reason=length` 时自动追加重试（`MINIMAX_ATTEMPTS`），原始输出始终落盘，失败日志也留在 `run_transcript.log`。
+10. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。
