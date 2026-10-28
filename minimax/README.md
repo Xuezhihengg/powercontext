@@ -35,14 +35,15 @@ minimax/
 ├── samples/
 │   ├── task-T001.md           ← 验证样例的任务描述
 │   ├── spec_update/SPEC-order-query.md  ← 规格 v2（新增 ORD-004/ORD-005）
-│   └── pristine/demo_project.tar.gz     ← 业务工程**改前基线**（规格 v1 + 未实现过滤的 service.py）
+│   ├── pristine/demo_project.tar.gz     ← 业务工程**改前基线**（规格 v1 + 未实现过滤的 service.py）
+│   └── committed/demo_project.tar.gz    ← 业务工程**提交态**（= step8 MiniMax 改后版本）的快照，供一键还原
 ├── scripts/
 │   ├── bootstrap.sh           ← 建 .venv 并安装依赖
 │   ├── start_server.sh        ← 启 PowerContext Server（127.0.0.1:18081）
 │   ├── stop_server.sh         ← 停 Server（任务状态保留）
 │   ├── run_demo.sh            ← 一键跑完 12 步验证样例 + step13 验收自检，产出 evidence/
 │   ├── check_evidence.py      ← 按题面 6 项验收机械核对 evidence/（38 项检查）
-│   ├── reset.sh               ← 业务工程回到初始快照 + 清空 seekdb（--pc-reset 连状态一起清）
+│   ├── reset.sh               ← 业务工程回到改前基线 + 清空 seekdb（--pc-reset 连状态一起清；--committed 还原提交态）
 │   └── snapshots.py           ← 由 step8 记录展开 evidence/code_before|code_after
 └── evidence/                  ← 运行产物（每次 run_demo.sh 覆盖），见第 7 节
 ```
@@ -57,10 +58,14 @@ minimax/
 |---|---|---|
 | 改后代码（= 仓库提交态）测试全过 | `cd demo_project && python -m pytest tests -q -o addopts=` | **14 passed**（目标 6 + 回归 8） |
 | 改前代码（初始基线）目标测试功能性失败 | `mkdir -p /tmp/pc_before && tar -xzf samples/pristine/demo_project.tar.gz -C /tmp/pc_before && cd /tmp/pc_before/demo_project && python -m pytest tests/test_order_filter_target.py -q -o addopts=` | **6 failed**（`TypeError: list_orders() got an unexpected keyword argument 'status'`）；同目录回归测试 **8 passed** |
-| 完整复现「改前失败 → MiniMax 真实改 → 改后全过 → 自检 38 PASS」 | `bash scripts/run_demo.sh`（step0 会先 `restore_pristine_demo_project()`） | 退出码 0 |
-| 把仓库工作区也回到改前基线 | `bash scripts/reset.sh`（不动 `evidence/`） | `demo_project/` = v1，`rm -rf .sdddata` |
+| 完整复现「改前失败 → MiniMax 真实改 → 改后全过 → 自检 38 PASS」 | `export MINIMAX_API_KEY=... && bash scripts/run_demo.sh`（step0 会先 `restore_pristine_demo_project()`） | 退出码 0 |
+| **没有 Key** 时试跑（保护交付物） | `bash scripts/run_demo.sh`（未设 Key） | **退出码 2，且在 step0 就中止：`evidence/` 与 `demo_project/` 一字未改**，随后 14 passed / 38 项全 PASS 都不受影响 |
+| 离线演示 step1–7（不覆盖已归档证据） | `ALLOW_PARTIAL_RUN=1 bash scripts/run_demo.sh` | 退出码 2；产物写入 `evidence_partial/`，结束时自动把 `demo_project/` 还原为提交态 |
+| 把仓库工作区回到改前基线 | `bash scripts/reset.sh`（不动 `evidence/`） | `demo_project/` = v1，`rm -rf .sdddata` |
+| 把 `demo_project/` 还原成提交态 | `bash scripts/reset.sh --committed` | `demo_project/` = v2（MiniMax 改后），`evidence/`/`.sdddata` 不动 |
 
-`run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**；`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
+`run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**；
+「先复位工作区再动 `evidence/`」的顺序也保证了：任何中途失败（缺 Key、缺依赖、MiniMax 调用异常）都不会让已归档的那次真实运行证据消失（若全流程走到 step8 之后才失败，上一次证据还会先备份到 `.evidence_backup/<时间戳>/`，可原样还原）；`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
 
 ---
 
@@ -112,7 +117,7 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 - `evidence/code_before/`、`evidence/code_after/`、`evidence/step8_code_diff.patch` —— MiniMax 修改前后代码
 - `evidence/logs/pytest_{before,after}_*.log` —— 修改前/后的 pytest 原始输出
 
-只想先看流程、暂不调用 MiniMax：`run_demo.sh` 会在 step8 前明确报错并退出（exit 2），step1–7 的证据照常生成。
+只想先看流程、暂不调用 MiniMax：`bash scripts/run_demo.sh` 会在 **step0 的前置门禁**就报错退出（exit 2），**不创建也不清空 `evidence/`**，因此仓库里已归档的真实运行证据保持原样；想看 step1–7 的离线产物，用 `ALLOW_PARTIAL_RUN=1 bash scripts/run_demo.sh`（产物写入 `evidence_partial/`，结束后 `demo_project/` 自动还原为提交态）。
 
 ## 4. 环境变量
 
@@ -127,7 +132,8 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 | `POWERCONTEXT_PORT` | `18081` | `start_server.sh` 监听端口 |
 | `POWERCONTEXT_HOME` | `minimax/.pcserver/home` | PowerContext 全部本地数据目录（脚本已自动设置） |
 | `SDD_DATA_DIR` | `.sdddata` | seekdb 数据目录（`seekdb.db` + `manifest.json` + `backups/`） |
-| `EVIDENCE_DIR` | `evidence` | 证据输出目录 |
+| `EVIDENCE_DIR` | `evidence`（`ALLOW_PARTIAL_RUN=1` 时默认 `evidence_partial`） | 证据输出目录 |
+| `ALLOW_PARTIAL_RUN` | `0` | `1` = 缺 `MINIMAX_API_KEY` 时仍允许跑到 step7 后中止（退出码 2），且不触碰 `evidence/` |
 | `FRESH_PC` | `1` | `1` = 先清空 PowerContext 库，演示「从空状态起步」；`0` = 保留现有状态 |
 
 ## 5. 调用入口（模块对外接口）
@@ -152,7 +158,7 @@ python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写�
 |---|---|
 | `0` | 成功 |
 | `1` | `verify` 存在未通过的测试套件 |
-| `2` | `run_demo.sh` 缺少 `MINIMAX_API_KEY` |
+| `2` | `run_demo.sh` 缺少 `MINIMAX_API_KEY`（step0 门禁即退出，`evidence/`/`demo_project/` 未改动；`ALLOW_PARTIAL_RUN=1` 时则停在 step8 并还原提交态） |
 | `3` | `state show`：该任务在 PowerContext 中还没有记录（空状态） |
 | `4` | `context`：`provenance.missing` 非空，即输出的来源无法核对 |
 | `5` | `patch`：模型输出没有造成任何文件改动 |
@@ -219,14 +225,16 @@ python3 scripts/check_evidence.py evidence
 ```bash
 bash scripts/reset.sh              # 业务工程回到改前基线 + 清空 seekdb；保留 PowerContext 状态（演示复用）
 bash scripts/reset.sh --pc-reset   # 连 PowerContext 任务状态一起清空，回到完全空状态
+bash scripts/reset.sh --committed  # 反向：把业务工程还原成仓库提交态（MiniMax 改后 v2），不清 seekdb
 ```
 
-`evidence/` 不会被 `reset.sh` 删除（重跑 `run_demo.sh` 才会覆盖），`samples/pristine/demo_project.tar.gz` 也不会被改动，随时可以再恢复回改后态：
+`evidence/` 不会被 `reset.sh` 删除（只有 `run_demo.sh` 的正常全流程会覆盖它），随时可以在两个状态之间来回切换并复核：
 
 ```bash
-cp -f evidence/code_after/src/order_service/service.py demo_project/src/order_service/service.py
-cp -f samples/spec_update/SPEC-order-query.md          demo_project/specs/SPEC-order-query.md
-python3 scripts/check_evidence.py evidence demo_project   # 38 项仍应全 PASS
+bash scripts/reset.sh && cd demo_project && python -m pytest tests -q -o addopts=   # 改前基线：6 failed / 8 passed
+cd .. && bash scripts/reset.sh --committed
+cd demo_project && python -m pytest tests -q -o addopts=                            # 提交态：14 passed
+cd .. && python3 scripts/check_evidence.py evidence demo_project                    # 38 项仍应全 PASS
 ```
 
 > `check_evidence.py` 的「改后代码落到工作区/归档」一项在两种工作区状态下都成立：工作区等于 `code_after` 时直接通过；工作区已被 `reset.sh` 恢复成 `code_before` 时，改为核对 `evidence/step9_code_after.tar.gz` 与 `code_after/` 一致。
@@ -238,6 +246,7 @@ python3 scripts/check_evidence.py evidence demo_project   # 38 项仍应全 PASS
 3. **PowerContext 状态载荷上限 8192 UTF-8 字节**：`taskrecord.py` 超限时按 notes → results 的顺序裁剪，并在记录里保留裁剪标记。
 4. **`verify` 依赖 `demo_project/tests` 内的 `conftest.py`** 注入 `src` 路径；不要改 `pytest.ini` 的 `testpaths`。
 5. **step1 的 exit 3 与 step3 的 exit 1 是预期结果**，脚本不计入异常步骤；`run_demo.sh` 的总退出码只反映真实异常。
+5b. **`run_demo.sh` 的三个门禁按「先只读检查、后破坏性动作」排序**：依赖检查 → 密钥检查 → 才复位 `demo_project/` 并清空证据目录。这样评审在没有 Key、没装依赖、或 MiniMax 服务异常的任一情况下，都不会破坏仓库里已归档的证据与提交态代码（干净环境彩排实测见「技术使用记录」开发记录第 13 条）。
 6. **端口 18081 被占用**：`POWERCONTEXT_PORT=18082 bash scripts/start_server.sh`，同时 `export POWERCONTEXT_URL=http://127.0.0.1:18082`。
 7. **MiniMax Key 与模型名**：`MINIMAX_API_KEY` 只在运行时从环境变量读取，作品不内置任何密钥、不写入证据文件（`grep -rl sk-api evidence/` 为空）。报 404 `The model ... is no longer available` = 模型名已下线（换 `MiniMax-M3`）；报 402 `insufficient balance (1008)` = 该 Key 是按量付费 Key 且账户无余额，需改用大赛赠送 Token Plan 对应的订阅 Key 或充值，程序会把 MiniMax 返回的状态码与错误体原样打印出来（不含 Key），便于区分这两类问题。
 8. **seekdb 本地数据目录较大**：`.sdddata/seekdb.db/`（嵌入式实例的数据目录，本次样例约 200–300MB）与 `.pcserver/home` 都在 `minimax/` 内且已被 `.gitignore` 忽略；`bash scripts/reset.sh` 会清掉它们，重跑自动重建。

@@ -5,6 +5,8 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+evidence_partial/
+.evidence_backup/
 *.egg-info/
 build/
 dist/

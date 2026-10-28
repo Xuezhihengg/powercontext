@@ -4,6 +4,10 @@
 # 退出码：0=全部通过（含 step13 自检）；1=有非预期失败步骤或自检 FAIL；2=缺 MINIMAX_API_KEY；70=依赖未就绪。
 #
 # 可覆盖环境变量：
+#   MINIMAX_API_KEY=...            必填（step8 真实调用 MiniMax）。缺失时在 step0 就 exit 2，
+#                                  并且**不改动** evidence/ 与 demo_project/（评审无密钥也不会破坏交付物）。
+#   ALLOW_PARTIAL_RUN=1            无密钥时也允许演示 step1-7：产物写入 evidence_partial/，
+#                                  结束时把 demo_project/ 恢复到仓库提交态（不覆盖已归档的 evidence/）。
 #   EVIDENCE_DIR=evidence          证据输出目录（彩排时可指向临时目录）
 #   SDD_DATA_DIR=.sdddata          seekdb 数据目录
 #   FRESH_PC=1                     先清空 PowerContext 库并重启 Server（演示“空状态起步”）；FRESH_PC=0 保留现有状态
@@ -15,14 +19,25 @@ cd "$(dirname "$0")/.."
 source scripts/_lib.sh
 activate_env
 
-EVIDENCE_DIR="${EVIDENCE_DIR:-evidence}"
+PARTIAL_RUN="${ALLOW_PARTIAL_RUN:-0}"
+if [[ "${PARTIAL_RUN}" == "1" ]]; then
+  EVIDENCE_DIR="${EVIDENCE_DIR:-evidence_partial}"
+else
+  EVIDENCE_DIR="${EVIDENCE_DIR:-evidence}"
+fi
 DATA_DIR="${SDD_DATA_DIR:-.sdddata}"
 LOGS_DIR="${EVIDENCE_DIR}/logs"
 TRANSCRIPT="${EVIDENCE_DIR}/run_transcript.log"
-mkdir -p "${EVIDENCE_DIR}" "${LOGS_DIR}"
-: > "${TRANSCRIPT}"
 FAILED=0
-say() { echo "[$(date +%H:%M:%S)] $*" | tee -a "${TRANSCRIPT}"; }
+# say：默认只打印到终端。只有正式开始运行（清空并重建证据目录、重写 transcript）之后
+# 才把 SAY_TO_LOG 置 1 —— 否则 step0 门禁阶段（缺依赖/缺密钥）会把提示语追加进
+# 仓库里已归档的 evidence/run_transcript.log，破坏那份证据的原始内容。
+SAY_TO_LOG=0
+say() {
+  local line="[$(date +%H:%M:%S)] $*"
+  echo "${line}"
+  if [[ "${SAY_TO_LOG}" == "1" ]]; then echo "${line}" >> "${TRANSCRIPT}"; fi
+}
 
 # run <cmd...>：执行并把输出与退出码写入 transcript；非零退出计入 FAILED
 run() {
@@ -70,11 +85,35 @@ if [[ ${PREFLIGHT} -ne 0 ]]; then
   say "!! 前置检查未通过，已中止；evidence/ 未改动。退出码 70。"
   exit 70
 fi
+# 密钥门禁同样放在「清空证据目录 / 复位业务工程」之前：
+# 缺密钥时立刻退出，仓库里已归档的那次真实运行的 evidence/ 与 demo_project/ 保持原样。
+if [[ -z "${MINIMAX_API_KEY:-}" && "${PARTIAL_RUN}" != "1" ]]; then
+  say "!! 未设置 MINIMAX_API_KEY：step8 无法真实调用 MiniMax（题面硬性要求），中止于 step0。退出码 2。"
+  say "   evidence/ 与 demo_project/ 未被改动：仓库已归档一次真实运行（step1-12），"
+  say "   可直接核对：python3 scripts/check_evidence.py evidence demo_project（38 项全 PASS）"
+  say "   如只想离线演示 step1-7：ALLOW_PARTIAL_RUN=1 bash scripts/run_demo.sh"
+  exit 2
+fi
+# 覆盖式运行前，先把上一次的证据备份到 .evidence_backup/<时间戳>/（已在 .gitignore 内）。
+# 这样即使 step8 之后某步失败（例如 MiniMax 账户 402/模型下线），已归档的证据也不会丢，
+# 可以从备份目录或 git 还原：cp -a .evidence_backup/<ts> ${EVIDENCE_DIR}
+BACKUP_DIR=""
+if [[ -d "${EVIDENCE_DIR}" ]]; then
+  BACKUP_DIR=".evidence_backup/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p ".evidence_backup"
+  if cp -a "${EVIDENCE_DIR}" "${BACKUP_DIR}" 2>/dev/null; then
+    echo "上一次的证据已备份到 ${BACKUP_DIR}/"
+  else
+    BACKUP_DIR=""
+    echo "证据备份失败（继续运行）"
+  fi
+fi
 restore_pristine_demo_project
 if [[ "${DATA_DIR}" != "${EVIDENCE_DIR}" ]]; then rm -rf "${DATA_DIR}"; fi
 rm -rf "${EVIDENCE_DIR}"
 mkdir -p "${EVIDENCE_DIR}" "${LOGS_DIR}"
 : > "${TRANSCRIPT}"
+SAY_TO_LOG=1
 
 say "== 1. PowerContext Server（18081；FRESH_PC=${FRESH_PC:-1}）=="
 if [[ "${FRESH_PC:-1}" == "1" ]]; then
@@ -118,12 +157,21 @@ run sddctx --quiet state save --task-file samples/task-T001.md --title "订单�
 
 say "== 8. MiniMax 依据上下文完成一次实际代码修改 =="
 if [[ -z "${MINIMAX_API_KEY:-}" ]]; then
-  say "!! 未设置 MINIMAX_API_KEY，无法执行真实 MiniMax 修改（题面硬性要求）。中止于 step8。"
-  say "   已完成步骤的产物在 ${EVIDENCE_DIR}/；设置密钥后重跑本脚本即可续上 step8-12。"
+  # 只有 ALLOW_PARTIAL_RUN=1 才可能走到这里（否则 step0 已以 exit 2 中止）。
+  say "!! 未设置 MINIMAX_API_KEY，无法执行真实 MiniMax 修改（题面硬性要求）。中止于 step8（ALLOW_PARTIAL_RUN=1）。"
+  say "   step1-7 的离线产物在 ${EVIDENCE_DIR}/；已归档的 evidence/ 未被改动；设置密钥后重跑即可续上 step8-13。"
+  restore_committed_demo_project
+  say "   demo_project/ 已恢复到提交态（MiniMax 改后版本：pytest tests -> 14 passed）。"
   exit 2
 fi
 run sddctx --quiet patch --project demo_project --data-dir "${DATA_DIR}" --task-file samples/task-T001.md \
-  --out "${EVIDENCE_DIR}/step8_minimax_run.json" --diff-out "${EVIDENCE_DIR}/step8_code_diff.patch"
+  --out "${EVIDENCE_DIR}/step8_minimax_run.json" --diff-out "${EVIDENCE_DIR}/step8_code_diff.patch" || {
+  if [[ -n "${BACKUP_DIR}" ]]; then
+    say "!! step8 未成功。上一次的完整证据仍在 ${BACKUP_DIR}/，可还原：cp -a ${BACKUP_DIR}/* ${EVIDENCE_DIR}/"
+    say "   （或 git checkout -- minimax/${EVIDENCE_DIR}）"
+  fi
+  exit 1
+}
 if [[ -f "${EVIDENCE_DIR}/step8_code_diff.patch" ]]; then
   say "   代码差异：${EVIDENCE_DIR}/step8_code_diff.patch（修改前文件另存于 ${DATA_DIR}/backups/）"
 fi
