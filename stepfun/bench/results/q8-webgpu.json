@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-10-28T13:42:12.094Z",
+  "model": "Xenova/bge-small-zh-v1.5",
+  "dtype": "q8",
+  "backend": "webgpu",
+  "fallbackReason": "",
+  "modelBytes": 24010842,
+  "totalBytes": 24451050,
+  "dim": 512,
+  "docs": 30,
+  "chunks": 30,
+  "corpusChars": 3317,
+  "docThroughputCharsPerSec": 2020,
+  "timings": {
+    "modelLoadMs": 216.9,
+    "modelWarmMs": 216.9,
+    "docEmbedMs": 1641.9,
+    "docEmbedFirstMs": 1656.7,
+    "writeMs": 79.81,
+    "refreshMs": 318.4,
+    "queryEmbedMedianMs": 20.1,
+    "searchMedianMs": 2.3,
+    "e2eMedianMs": 24.4
+  },
+  "quality": {
+    "recallAt5": 0.75,
+    "ndcgAt5": 0.6,
+    "mrrAt10": 0.586,
+    "perQuery": [
+      {
+        "id": "q01",
+        "recall": 1,
+        "ndcg": 0.6309297535714575,
+        "rank": 2
+      },
+      {
+        "id": "q02",
+        "recall": 0,
+        "ndcg": 0,
+        "rank": 7
+      },
+      {
+        "id": "q03",
+        "recall": 0.5,
+        "ndcg": 0.2640681225725909,
+        "rank": 4
+      },
+      {
+        "id": "q04",
+        "recall": 1,
+        "ndcg": 0.6934264036172708,
+        "rank": 2
+      },
+      {
+        "id": "q05",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q06",
+        "recall": 0,
+        "ndcg": 0,
+        "rank": 9
+      },
+      {
+        "id": "q07",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q08",
+        "recall": 0.5,
+        "ndcg": 0.23719771276929622,
+        "rank": 5
+      },
+      {
+        "id": "q09",
+        "recall": 1,
+        "ndcg": 0.8772153153380493,
+        "rank": 1
+      },
+      {
+        "id": "q10",
+        "recall": 1,
+        "ndcg": 0.5,
+        "rank": 3
+      },
+      {
+        "id": "q11",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q12",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      }
+    ]
+  },
+  "collection": "bench_q8_webgpu",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "wallClockMs": 5926
+}

@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-10-28T13:44:35.316Z",
+  "cold": {
+    "q8-wasm": {
+      "loadMs": 6125.1,
+      "wallMs": 6126.199999999255,
+      "modelBytes": 24010842
+    },
+    "fp16-webgpu": {
+      "loadMs": 4129.7,
+      "wallMs": 4169.300000000745,
+      "modelBytes": 47497427
+    }
+  },
+  "batches": {
+    "q8-wasm-b1": {
+      "medianMs": 1419.4,
+      "charsPerSec": 2337
+    },
+    "q8-wasm-b8": {
+      "medianMs": 1559.8,
+      "charsPerSec": 2127
+    },
+    "q8-wasm-b16": {
+      "medianMs": 1585.4,
+      "charsPerSec": 2092
+    },
+    "q8-wasm-b32": {
+      "medianMs": 1642.1,
+      "charsPerSec": 2020
+    },
+    "fp16-webgpu-b1": {
+      "medianMs": 230.4,
+      "charsPerSec": 14397
+    },
+    "fp16-webgpu-b8": {
+      "medianMs": 87.5,
+      "charsPerSec": 37909
+    },
+    "fp16-webgpu-b16": {
+      "medianMs": 70.9,
+      "charsPerSec": 46784
+    },
+    "fp16-webgpu-b32": {
+      "medianMs": 70.5,
+      "charsPerSec": 47050
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "seekdb-edge-kb",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "浏览器端本地向量化 + seekdb 混合检索的迷你知识库",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite",
+    "dev:server": "node server/index.mjs",
+    "build": "tsc --noEmit && vite build",
+    "start": "node server/index.mjs",
+    "bench": "node bench/run-bench.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.7.5",
+    "express": "^4.21.2",
+    "seekdb": "1.4.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.4.5"
+  }
+}

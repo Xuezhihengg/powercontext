@@ -1,0 +1,430 @@
+[
+  {
+    "timestamp": "2026-10-28T13:41:58.943Z",
+    "model": "Xenova/bge-small-zh-v1.5",
+    "dtype": "fp32",
+    "backend": "wasm",
+    "fallbackReason": "",
+    "modelBytes": 94851877,
+    "totalBytes": 95292085,
+    "dim": 512,
+    "docs": 30,
+    "chunks": 30,
+    "corpusChars": 3317,
+    "docThroughputCharsPerSec": 2127,
+    "timings": {
+      "modelLoadMs": 4026,
+      "modelWarmMs": 4026,
+      "docEmbedMs": 1559.2,
+      "docEmbedFirstMs": 1591.1,
+      "writeMs": 71.89,
+      "refreshMs": 324.24,
+      "queryEmbedMedianMs": 8.95,
+      "searchMedianMs": 2.19,
+      "e2eMedianMs": 13.15
+    },
+    "quality": {
+      "recallAt5": 1,
+      "ndcgAt5": 0.974,
+      "mrrAt10": 0.958,
+      "perQuery": [
+        {
+          "id": "q01",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q02",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q03",
+          "recall": 1,
+          "ndcg": 0.6934264036172708,
+          "rank": 2
+        },
+        {
+          "id": "q04",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q05",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q06",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q07",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q08",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q09",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q10",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q11",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q12",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        }
+      ]
+    },
+    "collection": "bench_fp32_wasm",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "wallClockMs": 9443
+  },
+  {
+    "timestamp": "2026-10-28T13:42:04.770Z",
+    "model": "Xenova/bge-small-zh-v1.5",
+    "dtype": "q8",
+    "backend": "wasm",
+    "fallbackReason": "",
+    "modelBytes": 24010842,
+    "totalBytes": 24451050,
+    "dim": 512,
+    "docs": 30,
+    "chunks": 30,
+    "corpusChars": 3317,
+    "docThroughputCharsPerSec": 2078,
+    "timings": {
+      "modelLoadMs": 232.2,
+      "modelWarmMs": 232.1,
+      "docEmbedMs": 1596,
+      "docEmbedFirstMs": 1624.6,
+      "writeMs": 69.76,
+      "refreshMs": 427.65,
+      "queryEmbedMedianMs": 10.2,
+      "searchMedianMs": 2.09,
+      "e2eMedianMs": 14.1
+    },
+    "quality": {
+      "recallAt5": 1,
+      "ndcgAt5": 0.974,
+      "mrrAt10": 0.958,
+      "perQuery": [
+        {
+          "id": "q01",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q02",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q03",
+          "recall": 1,
+          "ndcg": 0.6934264036172708,
+          "rank": 2
+        },
+        {
+          "id": "q04",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q05",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q06",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q07",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q08",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q09",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q10",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q11",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q12",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        }
+      ]
+    },
+    "collection": "bench_q8_wasm",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "wallClockMs": 5826
+  },
+  {
+    "timestamp": "2026-10-28T13:42:06.168Z",
+    "model": "Xenova/bge-small-zh-v1.5",
+    "dtype": "fp16",
+    "backend": "webgpu",
+    "fallbackReason": "",
+    "modelBytes": 47497427,
+    "totalBytes": 47937635,
+    "dim": 512,
+    "docs": 30,
+    "chunks": 30,
+    "corpusChars": 3317,
+    "docThroughputCharsPerSec": 45314,
+    "timings": {
+      "modelLoadMs": 387,
+      "modelWarmMs": 386.9,
+      "docEmbedMs": 73.2,
+      "docEmbedFirstMs": 106.8,
+      "writeMs": 76.7,
+      "refreshMs": 426.1,
+      "queryEmbedMedianMs": 9,
+      "searchMedianMs": 2.27,
+      "e2eMedianMs": 13.45
+    },
+    "quality": {
+      "recallAt5": 1,
+      "ndcgAt5": 0.974,
+      "mrrAt10": 0.958,
+      "perQuery": [
+        {
+          "id": "q01",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q02",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q03",
+          "recall": 1,
+          "ndcg": 0.6934264036172708,
+          "rank": 2
+        },
+        {
+          "id": "q04",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q05",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q06",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q07",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q08",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q09",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q10",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q11",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q12",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        }
+      ]
+    },
+    "collection": "bench_fp16_webgpu",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "wallClockMs": 1398
+  },
+  {
+    "timestamp": "2026-10-28T13:42:12.094Z",
+    "model": "Xenova/bge-small-zh-v1.5",
+    "dtype": "q8",
+    "backend": "webgpu",
+    "fallbackReason": "",
+    "modelBytes": 24010842,
+    "totalBytes": 24451050,
+    "dim": 512,
+    "docs": 30,
+    "chunks": 30,
+    "corpusChars": 3317,
+    "docThroughputCharsPerSec": 2020,
+    "timings": {
+      "modelLoadMs": 216.9,
+      "modelWarmMs": 216.9,
+      "docEmbedMs": 1641.9,
+      "docEmbedFirstMs": 1656.7,
+      "writeMs": 79.81,
+      "refreshMs": 318.4,
+      "queryEmbedMedianMs": 20.1,
+      "searchMedianMs": 2.3,
+      "e2eMedianMs": 24.4
+    },
+    "quality": {
+      "recallAt5": 0.75,
+      "ndcgAt5": 0.6,
+      "mrrAt10": 0.586,
+      "perQuery": [
+        {
+          "id": "q01",
+          "recall": 1,
+          "ndcg": 0.6309297535714575,
+          "rank": 2
+        },
+        {
+          "id": "q02",
+          "recall": 0,
+          "ndcg": 0,
+          "rank": 7
+        },
+        {
+          "id": "q03",
+          "recall": 0.5,
+          "ndcg": 0.2640681225725909,
+          "rank": 4
+        },
+        {
+          "id": "q04",
+          "recall": 1,
+          "ndcg": 0.6934264036172708,
+          "rank": 2
+        },
+        {
+          "id": "q05",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q06",
+          "recall": 0,
+          "ndcg": 0,
+          "rank": 9
+        },
+        {
+          "id": "q07",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q08",
+          "recall": 0.5,
+          "ndcg": 0.23719771276929622,
+          "rank": 5
+        },
+        {
+          "id": "q09",
+          "recall": 1,
+          "ndcg": 0.8772153153380493,
+          "rank": 1
+        },
+        {
+          "id": "q10",
+          "recall": 1,
+          "ndcg": 0.5,
+          "rank": 3
+        },
+        {
+          "id": "q11",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        },
+        {
+          "id": "q12",
+          "recall": 1,
+          "ndcg": 1,
+          "rank": 1
+        }
+      ]
+    },
+    "collection": "bench_q8_webgpu",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "wallClockMs": 5926
+  }
+]

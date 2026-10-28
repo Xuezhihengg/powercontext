@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-10-28T13:42:04.770Z",
+  "model": "Xenova/bge-small-zh-v1.5",
+  "dtype": "q8",
+  "backend": "wasm",
+  "fallbackReason": "",
+  "modelBytes": 24010842,
+  "totalBytes": 24451050,
+  "dim": 512,
+  "docs": 30,
+  "chunks": 30,
+  "corpusChars": 3317,
+  "docThroughputCharsPerSec": 2078,
+  "timings": {
+    "modelLoadMs": 232.2,
+    "modelWarmMs": 232.1,
+    "docEmbedMs": 1596,
+    "docEmbedFirstMs": 1624.6,
+    "writeMs": 69.76,
+    "refreshMs": 427.65,
+    "queryEmbedMedianMs": 10.2,
+    "searchMedianMs": 2.09,
+    "e2eMedianMs": 14.1
+  },
+  "quality": {
+    "recallAt5": 1,
+    "ndcgAt5": 0.974,
+    "mrrAt10": 0.958,
+    "perQuery": [
+      {
+        "id": "q01",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q02",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q03",
+        "recall": 1,
+        "ndcg": 0.6934264036172708,
+        "rank": 2
+      },
+      {
+        "id": "q04",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q05",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q06",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q07",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q08",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q09",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q10",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q11",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      },
+      {
+        "id": "q12",
+        "recall": 1,
+        "ndcg": 1,
+        "rank": 1
+      }
+    ]
+  },
+  "collection": "bench_q8_wasm",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "wallClockMs": 5826
+}
