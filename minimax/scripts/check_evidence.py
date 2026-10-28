@@ -68,12 +68,19 @@ def main() -> int:
         check("② MiniMax 实际参与：diff 文件存在且非空", bool(diff_text), err or "")
         for item in changed:
             rel = item["path"]
-            after = evidence / "code_after" / rel
+            after, before_snap = evidence / "code_after" / rel, evidence / "code_before" / rel
             if after.exists() and project.exists():
                 current = project / rel
-                same = current.exists() and current.read_text(encoding="utf-8") == after.read_text(encoding="utf-8")
-                check(f"② MiniMax 实际参与：code_after/{rel} 与工作区一致", same or _tar_matches(evidence, project, rel),
-                      "工作区已被 reset 回初始态时，请与 evidence/step9_code_after.tar.gz 比对" if not same else "")
+                text = current.read_text(encoding="utf-8") if current.exists() else None
+                same = text is not None and text == after.read_text(encoding="utf-8")
+                # 工作区也可能已被 scripts/reset.sh 恢复到改前基线：此时改后代码由 step9_code_after.tar.gz 交付。
+                reverted = bool(before_snap.exists()) and text == before_snap.read_text(encoding="utf-8")
+                archived = reverted and _tar_matches(evidence, project, rel)
+                detail = ("工作区即改后代码" if same
+                          else "工作区为改前基线（reset.sh 之后），改后代码见 evidence/step9_code_after.tar.gz" if archived
+                          else f"工作区 {current} 既不等于 code_after/{rel}，也不等于 code_before/{rel}；"
+                               "请重跑 bash scripts/run_demo.sh，或按 README 1.1 恢复提交态")
+                check(f"② MiniMax 实际参与：改后代码可核对（工作区或改后归档，{rel}）", same or archived, detail)
 
     before, err = load(evidence, "step3_verify_before.json")
     ctx1, err2 = load(evidence, "step4_context_specv1.json")
@@ -98,8 +105,15 @@ def main() -> int:
 
     init, err_init = load(evidence, "step2_init.json")
     db_path = Path((init or {}).get("db_path", "")) if init else Path("")
-    db_ok = _db_nonempty(db_path)
-    check("④ 数据库实际参与：seekdb 数据目录/文件存在且非空", db_ok, err_init or f"db_path={db_path}（step2_init.json 记录，相对路径按当前工作目录解析）")
+    snap, _ = load(evidence, "step12_seekdb_dir.txt")
+    live = _db_nonempty(db_path)
+    snap_ok = bool(snap) and "seekdb.db" in snap and _snap_has_files(snap)
+    # .sdddata/ 是运行期数据（嵌入式 seekdb 实例可达数百 MB，被 minimax/.gitignore 忽略，reset.sh 也会清空）。
+    # 因此「目录当前存在且非空」或「run_demo.sh step12b 固化的物理快照」任一成立即认定数据库真实存在。
+    check("④ 数据库实际参与：seekdb 数据目录/文件存在且非空（或已固化为 step12_seekdb_dir.txt 快照）",
+          live or snap_ok,
+          err_init or (f"db_path={db_path} 当前不存在（相对路径按当前工作目录解析），"
+                       "且 evidence/step12_seekdb_dir.txt 缺失或未记录非零体积的数据文件；重跑 run_demo.sh 即可生成"))
     if ctx2 is not None:
         engines = {q.get("engine") for q in ctx2.get("retrieval", {}).get("queries", [])}
         check("④ 数据库实际参与：上下文条目来自 seekdb 检索结果", "seekdb.hybrid_search" in engines, f"engines={sorted(e for e in engines if e)}")
@@ -173,6 +187,13 @@ def _db_nonempty(path: Path) -> bool:
     if path.is_dir():
         return any(item.is_file() and item.stat().st_size > 0 for item in path.rglob("*"))
     return False
+
+
+def _snap_has_files(snapshot_text: str) -> bool:
+    """step12_seekdb_dir.txt 里确有 seekdb 数据文件（文件数 > 0 且有非零体积条目）。"""
+    counts = [int(line) for line in snapshot_text.splitlines() if line.strip().isdigit()]
+    sized = [int(line.split("\t")[0]) for line in snapshot_text.splitlines() if "\t" in line and line.split("\t")[0].strip().isdigit()]
+    return bool(counts) and max(counts) > 0 and bool(sized) and max(sized) > 0
 
 
 def _tar_matches(evidence: Path, project: Path, rel: str) -> bool:

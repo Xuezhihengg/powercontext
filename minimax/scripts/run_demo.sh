@@ -154,6 +154,29 @@ run sddctx --quiet dbq --data-dir "${DATA_DIR}" --kind spec --text "订单 状�
 run sddctx --quiet dbq --data-dir "${DATA_DIR}" --kind code --text "list_orders 过滤" --out "${EVIDENCE_DIR}/step12_dbq_code.json"
 run sddctx --quiet dbq --data-dir "${DATA_DIR}" --kind test --text "filter status min_amount" --out "${EVIDENCE_DIR}/step12_dbq_test.json"
 
+say "== 12b. seekdb 物理目录快照（证明检索发生在真实的数据库文件上）=="
+# .sdddata/ 在 .gitignore 里（嵌入式 seekdb 实例目录可达数百 MB，不入库），reset.sh 也会清空它；
+# 这里把运行当时的目录体积与文件清单固化成文本证据，评审不重跑也能核对。
+SEEKDB_SNAP="${EVIDENCE_DIR}/step12_seekdb_dir.txt"
+{
+  echo "时间: $(date -Is)"
+  echo "\$ realpath ${DATA_DIR}"
+  realpath "${DATA_DIR}" 2>/dev/null || true
+  echo "\$ du -sh ${DATA_DIR}"
+  du -sh "${DATA_DIR}" 2>/dev/null || true
+  echo "\$ du -sh ${DATA_DIR}/seekdb.db"
+  du -sh "${DATA_DIR}/seekdb.db" 2>/dev/null || true
+  echo "\$ find ${DATA_DIR}/seekdb.db -type f | wc -l"
+  find "${DATA_DIR}/seekdb.db" -type f 2>/dev/null | wc -l
+  echo "\$ find ${DATA_DIR} -maxdepth 2 | head -25"
+  find "${DATA_DIR}" -maxdepth 2 2>/dev/null | head -25
+  echo "\$ find ${DATA_DIR}/seekdb.db -type f -size +100k -printf 字节+路径 | sort -rn | head -8"
+  find "${DATA_DIR}/seekdb.db" -type f -size +100k -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -8
+  echo "\$ python3 -c ... manifest.json 概览"
+  python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print('manifest 顶层键:',list(d)[:8]);print('条目数:',len(d.get('docs',d)))" "${DATA_DIR}/manifest.json" 2>/dev/null || echo "（无 manifest.json）"
+} > "${SEEKDB_SNAP}" 2>&1 || true
+say "   已写入 ${SEEKDB_SNAP}（seekdb 数据目录本身不入库，见 minimax/.gitignore）"
+
 say "== 完成。异常步骤数：${FAILED}（step1 空状态、step3 修改前失败属预期，不计入）=="
 
 # step13：按题面 6 项验收机械核对证据（放在汇总行之后，保证自检能读到“异常步骤数：0”）
