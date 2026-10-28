@@ -40,7 +40,8 @@ minimax/
 │   ├── bootstrap.sh           ← 建 .venv 并安装依赖
 │   ├── start_server.sh        ← 启 PowerContext Server（127.0.0.1:18081）
 │   ├── stop_server.sh         ← 停 Server（任务状态保留）
-│   ├── run_demo.sh            ← 一键跑完 12 步验证样例，产出 evidence/
+│   ├── run_demo.sh            ← 一键跑完 12 步验证样例 + step13 验收自检，产出 evidence/
+│   ├── check_evidence.py      ← 按题面 6 项验收机械核对 evidence/（38 项检查）
 │   ├── reset.sh               ← 业务工程回到初始快照 + 清空 seekdb（--pc-reset 连状态一起清）
 │   └── snapshots.py           ← 由 step8 记录展开 evidence/code_before|code_after
 └── evidence/                  ← 运行产物（每次 run_demo.sh 覆盖），见第 7 节
@@ -81,7 +82,13 @@ bash scripts/start_server.sh                  # 停止：bash scripts/stop_serve
 # ③ 跑完整验证样例（12 步，产出 evidence/）
 export MINIMAX_API_KEY=<你的 MiniMax Key>
 bash scripts/run_demo.sh
-echo "exit=$?"                               # 0 = 全部验收步骤通过
+echo "exit=$?"                               # 0 = 12 步全过 且 step13 验收自检通过
+```
+
+`run_demo.sh` 的 **step13 会自己核对六项验收**（`scripts/check_evidence.py`，38 项 PASS/FAIL），不需要人工读日志：
+
+```bash
+python3 scripts/check_evidence.py evidence   # 可单独执行；FAIL 行会写明缺哪个证据
 ```
 
 `run_demo.sh` 结束后：
@@ -165,6 +172,9 @@ sddctx verify --project demo_project --label after
 sddctx state save --task-file samples/task-T001.md --phase manual --done "手工验证"
 bash scripts/stop_server.sh && bash scripts/start_server.sh
 sddctx state show --task-id T-001          # 空状态时 exit 3，有记录时输出 phase/done/todo
+
+# 跑完 run_demo.sh 后一键自检 6 项验收
+python3 scripts/check_evidence.py evidence
 ```
 
 ## 7. evidence/ 里有什么
@@ -184,6 +194,7 @@ sddctx state show --task-id T-001          # 空状态时 exit 3，有记录时�
 | `step9_verify_after.json`、`logs/pytest_after_*.log`、`step9_code_after.tar.gz` | 代码修改有效 | 修改后目标 + 回归全部通过 |
 | `step11_state_show_after.json`、`step11_context_final.{json,md}` | 状态能够复用 | 重启 Server 后新进程回读状态，且状态进入后续上下文 |
 | `step12_dbq_*.json` | 数据库实际参与 | 三类资料（spec/code/test）的真实检索结果与查询语句 |
+| （step13 输出在 transcript 末尾） | 全部 6 项 | `check_evidence.py` 的 38 项 PASS/FAIL 结论，逐条对应题面验收条件 |
 
 ## 8. 重置
 
@@ -203,4 +214,5 @@ bash scripts/reset.sh --pc-reset   # 连 PowerContext 任务状态一起清空�
 5. **step1 的 exit 3 与 step3 的 exit 1 是预期结果**，脚本不计入异常步骤；`run_demo.sh` 的总退出码只反映真实异常。
 6. **端口 18081 被占用**：`POWERCONTEXT_PORT=18082 bash scripts/start_server.sh`，同时 `export POWERCONTEXT_URL=http://127.0.0.1:18082`。
 7. **MiniMax Key**：使用大赛赠送的 MiniMax Token Plan Key（`MINIMAX_API_KEY`）。作品不内置任何密钥，也不读取本地缓存文件。
-8. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。
+8. **seekdb 本地数据目录较大**：`.sdddata/seekdb.db/`（嵌入式实例的数据目录，本次样例约 200–300MB）与 `.pcserver/home` 都在 `minimax/` 内且已被 `.gitignore` 忽略；`bash scripts/reset.sh` 会清掉它们，重跑自动重建。
+9. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。

@@ -133,5 +133,16 @@ run sddctx --quiet dbq --data-dir "${DATA_DIR}" --kind code --text "list_orders 
 run sddctx --quiet dbq --data-dir "${DATA_DIR}" --kind test --text "filter status min_amount" --out "${EVIDENCE_DIR}/step12_dbq_test.json"
 
 say "== 完成。异常步骤数：${FAILED}（step1 空状态、step3 修改前失败属预期，不计入）=="
+
+# step13：按题面 6 项验收机械核对证据（放在汇总行之后，保证自检能读到“异常步骤数：0”）
+CHECK_RC=0
+say "== 13. 验收自检：python3 scripts/check_evidence.py ${EVIDENCE_DIR} demo_project =="
+python3 scripts/check_evidence.py "${EVIDENCE_DIR}" demo_project >> "${TRANSCRIPT}" 2>&1 || CHECK_RC=$?
+tail -3 "${TRANSCRIPT}" | sed 's/^/   /'
+say "  -> check_evidence exit ${CHECK_RC}（0=6 项验收全部成立）"
+
 say "   证据目录：${EVIDENCE_DIR}/（transcript: ${TRANSCRIPT}）"
-exit $(( FAILED > 0 ? 1 : 0 ))
+if [[ ${CHECK_RC} -ne 0 ]]; then
+  say "!! 验收自检未通过：请按上方 FAIL 行修正（例如用真实 MINIMAX_API_KEY 重跑，而非本地假端点）"
+fi
+exit $(( (FAILED > 0 || CHECK_RC > 0) ? 1 : 0 ))
