@@ -64,8 +64,10 @@ minimax/
 | 把仓库工作区回到改前基线 | `bash scripts/reset.sh`（不动 `evidence/`） | `demo_project/` = v1，`rm -rf .sdddata` |
 | 把 `demo_project/` 还原成提交态 | `bash scripts/reset.sh --committed` | `demo_project/` = v2（MiniMax 改后），`evidence/`/`.sdddata` 不动 |
 
-`run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**；
-「先复位工作区再动 `evidence/`」的顺序也保证了：任何中途失败（缺 Key、缺依赖、MiniMax 调用异常）都不会让已归档的那次真实运行证据消失（若全流程走到 step8 之后才失败，上一次证据还会先备份到 `.evidence_backup/<时间戳>/`，可原样还原）；`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
+> 以上路径（尤其是**没有 MiniMax 密钥**的两条）已在 `git archive HEAD` 生成的干净副本上逐条实测，结果见「技术使用记录.md」第 4c 节 R1–R10（10 条路径，含正常/异常/破坏性还原/真实重跑）；一句话结论：干净环境里 `bootstrap.sh` → 直接跑测试（14 passed）→ 直接跑自检（38 项全 PASS）都成立，任何失败路径都不会破坏仓库里已归档的真实运行证据。
+
+`run_demo.sh` 每次都从 `samples/pristine/` 的初始快照起步，因此**无论工作区当前是改前还是改后态，一键流程结果一致**。
+step0 内部的顺序是「只读检查依赖 → 只读检查密钥 → 备份现有 `evidence/` 到 `.evidence_backup/<时间戳>/` → 才复位工作区并重建证据目录」，所以缺依赖（exit 70）、缺 Key（exit 2）都在任何写动作之前退出；即使流程走到 step8 之后才失败（例如 MiniMax 账户 402、模型名下线），上一次证据也已先备份，可按脚本打印的命令原样还原。`evidence/code_before/` 与 `demo_project/src/order_service/service.py` 的差异即 `evidence/step8_code_diff.patch`。
 
 ---
 
@@ -246,9 +248,9 @@ cd .. && python3 scripts/check_evidence.py evidence demo_project                
 3. **PowerContext 状态载荷上限 8192 UTF-8 字节**：`taskrecord.py` 超限时按 notes → results 的顺序裁剪，并在记录里保留裁剪标记。
 4. **`verify` 依赖 `demo_project/tests` 内的 `conftest.py`** 注入 `src` 路径；不要改 `pytest.ini` 的 `testpaths`。
 5. **step1 的 exit 3 与 step3 的 exit 1 是预期结果**，脚本不计入异常步骤；`run_demo.sh` 的总退出码只反映真实异常。
-5b. **`run_demo.sh` 的三个门禁按「先只读检查、后破坏性动作」排序**：依赖检查 → 密钥检查 → 才复位 `demo_project/` 并清空证据目录。这样评审在没有 Key、没装依赖、或 MiniMax 服务异常的任一情况下，都不会破坏仓库里已归档的证据与提交态代码（干净环境彩排实测见「技术使用记录」开发记录第 13 条）。
 6. **端口 18081 被占用**：`POWERCONTEXT_PORT=18082 bash scripts/start_server.sh`，同时 `export POWERCONTEXT_URL=http://127.0.0.1:18082`。
 7. **MiniMax Key 与模型名**：`MINIMAX_API_KEY` 只在运行时从环境变量读取，作品不内置任何密钥、不写入证据文件（`grep -rl sk-api evidence/` 为空）。报 404 `The model ... is no longer available` = 模型名已下线（换 `MiniMax-M3`）；报 402 `insufficient balance (1008)` = 该 Key 是按量付费 Key 且账户无余额，需改用大赛赠送 Token Plan 对应的订阅 Key 或充值，程序会把 MiniMax 返回的状态码与错误体原样打印出来（不含 Key），便于区分这两类问题。
 8. **seekdb 本地数据目录较大**：`.sdddata/seekdb.db/`（嵌入式实例的数据目录，本次样例约 200–300MB）与 `.pcserver/home` 都在 `minimax/` 内且已被 `.gitignore` 忽略；`bash scripts/reset.sh` 会清掉它们，重跑自动重建。
 9. **推理模型的回答格式**：MiniMax-M3 把思考写在 `message.content` 的 think 标签块里、答案在块之后；`minimax_client._strip_think()` 先剥思考，再按「围栏代码块 / 整段文本 / 括号配对扫描」三级解析约定的 files JSON。解析不出来或 `finish_reason=length` 时自动追加重试（`MINIMAX_ATTEMPTS`），原始输出始终落盘，失败日志也留在 `run_transcript.log`。
-10. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。
+10. **模型输出不保证逐字复现**：题面明确「不要求模型重新生成完全相同的补丁」。这条在本作品里被实测过：同一份上下文、同一个 `MiniMax-M3` 的两次独立调用（登记的 run4 与干净副本彩排 R9）产出的 `service.py` 只差两处注释措辞，函数体逐字相同，两次都 14 passed / 38 项全 PASS（数据见「技术使用记录」第 4c 节 R9）。若某次模型越界（如试图改测试），`patcher.py` 会拒绝并报错，重跑 `sddctx patch` 即可，失败日志同样保留在 `run_transcript.log`。
+11. **门禁顺序保证「失败也不破坏交付物」**：`run_demo.sh` 的 step0 按「只读检查依赖 → 只读检查 `MINIMAX_API_KEY` → 备份现有 `evidence/` → 才复位 `demo_project/` 并重建证据目录」执行，所以缺依赖（exit 70）、缺 Key（exit 2）都发生在任何写动作之前；step8 之后失败时上一次证据仍在 `.evidence_backup/<时间戳>/`。干净环境（`git archive HEAD`）R1–R10 共 10 条评审路径的实测见「技术使用记录」第 4c 节（R10 就是「忘记跑 bootstrap.sh」这一条）。
