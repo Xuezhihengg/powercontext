@@ -1,0 +1,293 @@
+{
+  "task": {
+    "description": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。",
+    "task_id": "T-001"
+  },
+  "applicable_specs": [
+    {
+      "req_id": "ORD-001",
+      "title": "按客户查询",
+      "source": "specs/SPEC-order-query.md",
+      "sha": "c7ca2ba13dffc148",
+      "text": "## ORD-001 按客户查询\n订单查询接口必须按客户 ID 过滤，返回且仅返回该客户的全部订单。\n- 优先级：P0\n- 关联代码：src/order_service/service.py::list_orders\n- 验证：tests/test_orders_regression.py::test_list_orders_by_customer"
+    },
+    {
+      "req_id": "ORD-CORE-001",
+      "title": "状态枚举",
+      "source": "specs/SPEC-order-core.md",
+      "sha": "c554f606dcf31ecd",
+      "text": "## ORD-CORE-001 状态枚举\n订单状态仅限 pending/paid/shipped/cancelled 四种；不得新增状态或修改枚举语义。\n- 优先级：P0\n- 关联代码：src/order_service/models.py::STATUS_SET"
+    },
+    {
+      "req_id": "REF-001",
+      "title": "退款金额边界",
+      "source": "specs/SPEC-refund-boundary.md",
+      "sha": "f7119b4456db80ad",
+      "text": "## REF-001 退款金额边界\n退款金额为负数或超过原订单金额时，必须拒绝并抛出包含错误码 INVALID_AMOUNT 的 ValueError。\n- 优先级：P0\n- 关联代码：src/order_service/service.py::refund_order\n- 验证：tests/test_orders_regression.py::test_refund_invalid_amount_raises"
+    },
+    {
+      "req_id": "REF-002",
+      "title": "退款状态限制",
+      "source": "specs/SPEC-refund-boundary.md",
+      "sha": "68ef60dceb89f583",
+      "text": "## REF-002 退款状态限制\n仅 paid/shipped 状态的订单允许退款；其他状态退款必须抛出包含错误码 REFUND_NOT_ALLOWED 的 ValueError。\n- 优先级：P0\n- 关联代码：src/order_service/service.py::refund_order\n- 验证：tests/test_orders_regression.py::test_refund_only_paid_or_shipped"
+    },
+    {
+      "req_id": "ORD-002",
+      "title": "空结果",
+      "source": "specs/SPEC-order-query.md",
+      "sha": "965e3567bc64ccca",
+      "text": "## ORD-002 空结果\n客户不存在任何订单时，查询返回空列表，不得抛出异常。\n- 优先级：P1\n- 关联代码：src/order_service/service.py::list_orders\n- 验证：tests/test_orders_regression.py::test_list_orders_empty_customer"
+    },
+    {
+      "req_id": "ORD-003",
+      "title": "确定性排序",
+      "source": "specs/SPEC-order-query.md",
+      "sha": "a05a8c7c3b01e21d",
+      "text": "## ORD-003 确定性排序\n查询结果按 created_at 升序稳定排序；同秒内按插入顺序返回。\n- 优先级：P1\n- 关联代码：src/order_service/repository.py::list_by_customer\n- 验证：tests/test_orders_regression.py::test_list_orders_ordering_stable",
+      "origin": "same-spec-file"
+    },
+    {
+      "req_id": "ORD-CORE-002",
+      "title": "金额单位",
+      "source": "specs/SPEC-order-core.md",
+      "sha": "6c12f9a063d14abc",
+      "text": "## ORD-CORE-002 金额单位\nOrder.total_amount 一律使用整型分（cents），禁止浮点，避免精度误差。\n- 优先级：P0\n- 关联代码：src/order_service/models.py::Order",
+      "origin": "same-spec-file"
+    },
+    {
+      "req_id": "ORD-CORE-003",
+      "title": "调用兼容",
+      "source": "specs/SPEC-order-core.md",
+      "sha": "4e31a781e787eb1a",
+      "text": "## ORD-CORE-003 调用兼容\nlist_orders(customer_id) 的位置参数调用方式必须保持不变；新增参数只能是带默认值的可选参数。\n- 优先级：P0\n- 关联代码：src/order_service/service.py::list_orders\n- 验证：tests/test_orders_regression.py::test_list_orders_positional_compat",
+      "origin": "same-spec-file"
+    }
+  ],
+  "code_targets": [
+    {
+      "path": "src/order_service/service.py",
+      "indexed_symbols": [
+        "reset_repository",
+        "create_order",
+        "get_order",
+        "list_orders",
+        "refund_order"
+      ],
+      "origin": "seekdb:code",
+      "file_sha256": "dcae378e938ed61b",
+      "content": "\"\"\"订单服务门面（v1）。\n\n当前版本仅支持按客户过滤（SPEC-order-query ORD-001~003、SPEC-order-core ORD-CORE-003）。\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom order_service.models import STATUS_PAID, STATUS_SET, STATUS_SHIPPED, Order\nfrom order_service.repository import InMemoryOrderRepository\n\n_default_repository = InMemoryOrderRepository()\n\n\ndef reset_repository() -> InMemoryOrderRepository:\n    \"\"\"测试辅助：重建仓储并回填固定样例数据。\"\"\"\n    global _default_repository\n    _default_repository = InMemoryOrderRepository()\n    for spec in SAMPLE_FIXTURES:\n        create_order(**spec)\n    return _default_repository\n\n\ndef create_order(\n    customer_id: str,\n    items: list[str],\n    total_amount: int,\n    status: str = \"pending\",\n    order_id: str | None = None,\n    repository: InMemoryOrderRepository | None = None,\n) -> Order:\n    repo = repository or _default_repository\n    order = Order(\n        order_id=order_id or f\"ord-{repo.next_created_at():04d}\",\n        customer_id=customer_id,\n        total_amount=total_amount,\n        created_at=repo.next_created_at(),\n        status=status,\n        items=list(items),\n    )\n    return repo.add(order)\n\n\ndef get_order(order_id: str, repository: InMemoryOrderRepository | None = None) -> Order:\n    repo = repository or _default_repository\n    order = repo.get(order_id)\n    if order is None:\n        raise KeyError(f\"ORDER_NOT_FOUND: {order_id}\")\n    return order\n\n\ndef list_orders(customer_id: str, repository: InMemoryOrderRepository | None = None) -> list[Order]:\n    \"\"\"按客户查询订单（ORD-001）。v1 仅支持 customer_id 过滤。\"\"\"\n    repo = repository or _default_repository\n    return repo.list_by_customer(customer_id)\n\n\ndef refund_order(order_id: str, refund_amount: int, repository: InMemoryOrderRepository | None = None) -> Order:\n    \"\"\"退款边界（SPEC-refund-boundary REF-001/REF-002，已实现，作为回归范围）。\"\"\"\n    repo = repository or _default_repository\n    order = get_order(order_id, repository=repo)\n    if refund_amount < 0 or refund_amount > order.total_amount:\n        raise ValueError(f\"INVALID_AMOUNT: refund {refund_amount} not in [0, {order.total_amount}]\")\n    if order.status not in (STATUS_PAID, STATUS_SHIPPED):\n        raise ValueError(f\"REFUND_NOT_ALLOWED: status {order.status!r}\")\n    return order\n\n\n# 固定样例数据：供回归与目标测试共享，保证前后运行数据集一致。\nSAMPLE_FIXTURES = [\n    {\"order_id\": \"ord-0001\", \"customer_id\": \"c1\", \"items\": [\"book\"], \"total_amount\": 500, \"status\": \"pending\"},\n    {\"order_id\": \"ord-0002\", \"customer_id\": \"c1\", \"items\": [\"keyboard\"], \"total_amount\": 1500, \"status\": \"paid\"},\n    {\"order_id\": \"ord-0003\", \"customer_id\": \"c1\", \"items\": [\"mouse\"], \"total_amount\": 900, \"status\": \"paid\"},\n    {\"order_id\": \"ord-0004\", \"customer_id\": \"c1\", \"items\": [\"monitor\"], \"total_amount\": 2000, \"status\": \"shipped\"},\n    {\"order_id\": \"ord-0005\", \"customer_id\": \"c1\", \"items\": [\"cable\"], \"total_amount\": 100, \"status\": \"cancelled\"},\n    {\"order_id\": \"ord-0006\", \"customer_id\": \"c2\", \"items\": [\"phone\"], \"total_amount\": 3000, \"status\": \"paid\"},\n]\n\nreset_repository()\n",
+      "truncated": false
+    },
+    {
+      "path": "src/order_service/repository.py",
+      "indexed_symbols": [
+        "InMemoryOrderRepository",
+        "__init__",
+        "next_created_at",
+        "add",
+        "get",
+        "list_by_customer"
+      ],
+      "origin": "seekdb:code",
+      "file_sha256": "c14ec580efa2012a",
+      "content": "\"\"\"进程内订单仓储。业务工程保持自带存储，本模块与大赛上下文模块无关。\"\"\"\n\nfrom __future__ import annotations\n\nfrom order_service.models import Order\n\n\nclass InMemoryOrderRepository:\n    def __init__(self) -> None:\n        self._orders: dict[str, Order] = {}\n        self._seq = 0\n\n    def next_created_at(self) -> int:\n        self._seq += 1\n        return self._seq\n\n    def add(self, order: Order) -> Order:\n        self._orders[order.order_id] = order\n        return order\n\n    def get(self, order_id: str) -> Order | None:\n        return self._orders.get(order_id)\n\n    def list_by_customer(self, customer_id: str) -> list[Order]:\n        \"\"\"ORD-001/ORD-002/ORD-003：按客户过滤并按 created_at 稳定升序。\"\"\"\n        matched = [o for o in self._orders.values() if o.customer_id == customer_id]\n        return sorted(matched, key=lambda o: o.created_at)\n",
+      "truncated": false
+    },
+    {
+      "path": "src/order_service/models.py",
+      "indexed_symbols": [
+        "Order",
+        "__post_init__"
+      ],
+      "origin": "seekdb:code",
+      "file_sha256": "098b87a50eaad2dd",
+      "content": "\"\"\"订单模型与枚举。见 SPEC-order-core。\"\"\"\n\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass, field\n\nSTATUS_PENDING = \"pending\"\nSTATUS_PAID = \"paid\"\nSTATUS_SHIPPED = \"shipped\"\nSTATUS_CANCELLED = \"cancelled\"\nSTATUS_SET = frozenset({STATUS_PENDING, STATUS_PAID, STATUS_SHIPPED, STATUS_CANCELLED})\n\n\n@dataclass\nclass Order:\n    \"\"\"订单记录。\n\n    total_amount 使用整型分（ORD-CORE-002），created_at 为插入序号（ORD-003 的稳定排序键）。\n    \"\"\"\n\n    order_id: str\n    customer_id: str\n    total_amount: int\n    created_at: int\n    status: str = STATUS_PENDING\n    items: list[str] = field(default_factory=list)\n\n    def __post_init__(self) -> None:\n        if not isinstance(self.total_amount, int) or self.total_amount < 0:\n            raise ValueError(f\"INVALID_AMOUNT: total_amount must be a non-negative int, got {self.total_amount!r}\")\n        if self.status not in STATUS_SET:\n            raise ValueError(f\"INVALID_STATUS: unknown order status {self.status!r}\")\n",
+      "truncated": false
+    },
+    {
+      "path": "src/order_service/__init__.py",
+      "indexed_symbols": [],
+      "origin": "seekdb:code",
+      "file_sha256": "0d6eefddbd33635a",
+      "content": "\"\"\"order_service：大赛验证样例用的最小订单业务工程（纯标准库实现）。\"\"\"\n\nfrom order_service.models import Order, STATUS_SET\nfrom order_service.service import create_order, get_order, list_orders, refund_order\n\n__all__ = [\"Order\", \"STATUS_SET\", \"create_order\", \"get_order\", \"list_orders\", \"refund_order\"]\n",
+      "truncated": false
+    }
+  ],
+  "verification_tests": [
+    {
+      "path": "tests/test_order_filter_target.py",
+      "cases": [
+        "test_filter_by_status",
+        "test_status_case_insensitive_and_trimmed",
+        "test_status_empty_or_none_means_no_filter",
+        "test_min_amount_filter",
+        "test_invalid_status_raises_error_code",
+        "test_combined_filters_keep_deterministic_ordering"
+      ],
+      "origin": "seekdb:test",
+      "file_sha256": "59dff46b97f3dd4f",
+      "content": "\"\"\"目标功能测试（任务 T-001）：修改前必须失败（目标行为未实现），修改后必须全部通过。\n\n依据：SPEC-order-query v2 的 ORD-004/ORD-005，以及必须保持的 ORD-001/002/003/CORE-003。\n只使用现有可导入名称，确保修改前的失败是功能性失败（TypeError/断言失败），不是环境错误。\n\"\"\"\n\nimport pytest\n\nfrom order_service import models, service\n\n\n@pytest.fixture(autouse=True)\ndef _fixtures():\n    service.reset_repository()\n\n\ndef _ids(orders):\n    return [o.order_id for o in orders]\n\n\ndef test_filter_by_status():\n    # ORD-004：status 过滤\n    orders = service.list_orders(\"c1\", status=\"paid\")\n    assert _ids(orders) == [\"ord-0002\", \"ord-0003\"]\n    assert {o.status for o in orders} == {models.STATUS_PAID}\n\n\ndef test_status_case_insensitive_and_trimmed():\n    # ORD-004：大小写不敏感、去除首尾空白\n    assert _ids(service.list_orders(\"c1\", status=\" PAID \")) == _ids(service.list_orders(\"c1\", status=\"paid\"))\n\n\ndef test_status_empty_or_none_means_no_filter():\n    # ORD-004：空字符串或 None 表示不过滤（且仍满足 ORD-001 客户范围）\n    full = _ids(service.list_orders(\"c1\"))\n    assert _ids(service.list_orders(\"c1\", status=\"\")) == full\n    assert _ids(service.list_orders(\"c1\", status=None)) == full\n\n\ndef test_min_amount_filter():\n    # ORD-005：min_amount 按 total_amount（整型分）做包含式下限过滤\n    orders = service.list_orders(\"c1\", min_amount=1000)\n    assert _ids(orders) == [\"ord-0002\", \"ord-0004\"]\n    assert all(o.total_amount >= 1000 for o in orders)\n\n\ndef test_invalid_status_raises_error_code():\n    # ORD-005(边界)：非法 status 抛出含 INVALID_STATUS 的 ValueError，不得静默返回全部\n    with pytest.raises(ValueError, match=\"INVALID_STATUS\"):\n        service.list_orders(\"c1\", status=\"archived\")\n\n\ndef test_combined_filters_keep_deterministic_ordering():\n    # ORD-004+ORD-005 组合，结果仍满足 ORD-001 客户范围与 ORD-003 稳定排序\n    orders = service.list_orders(\"c1\", status=\"paid\", min_amount=1000)\n    assert _ids(orders) == [\"ord-0002\"]\n",
+      "truncated": false
+    },
+    {
+      "path": "tests/test_orders_regression.py",
+      "cases": [
+        "test_create_and_fetch_order",
+        "test_create_order_rejects_float_amount",
+        "test_list_orders_by_customer",
+        "test_list_orders_empty_customer",
+        "test_list_orders_ordering_stable",
+        "test_list_orders_positional_compat",
+        "test_refund_invalid_amount_raises",
+        "test_refund_only_paid_or_shipped"
+      ],
+      "origin": "seekdb:test",
+      "file_sha256": "ec429a7990a3522c",
+      "content": "\"\"\"回归测试：修改前后都必须全部通过（覆盖 SPEC-order-query v1、SPEC-order-core、SPEC-refund-boundary）。\"\"\"\n\nimport pytest\n\nfrom order_service import models, service\n\n\n@pytest.fixture(autouse=True)\ndef _fixtures():\n    service.reset_repository()\n\n\ndef test_create_and_fetch_order():\n    order = service.create_order(customer_id=\"c3\", items=[\"pen\"], total_amount=120)\n    fetched = service.get_order(order.order_id)\n    assert fetched is order\n    assert fetched.status == models.STATUS_PENDING\n\n\ndef test_create_order_rejects_float_amount():\n    with pytest.raises(ValueError, match=\"INVALID_AMOUNT\"):\n        service.create_order(customer_id=\"c3\", items=[\"pen\"], total_amount=1.5)  # type: ignore[arg-type]\n\n\ndef test_list_orders_by_customer():\n    orders = service.list_orders(\"c1\")\n    assert [o.order_id for o in orders] == [\"ord-0001\", \"ord-0002\", \"ord-0003\", \"ord-0004\", \"ord-0005\"]\n    assert all(o.customer_id == \"c1\" for o in orders)\n\n\ndef test_list_orders_empty_customer():\n    assert service.list_orders(\"nobody\") == []\n\n\ndef test_list_orders_ordering_stable():\n    orders = service.list_orders(\"c1\")\n    assert [o.created_at for o in orders] == sorted(o.created_at for o in orders)\n\n\ndef test_list_orders_positional_compat():\n    # ORD-CORE-003：位置参数调用保持不变\n    orders = service.list_orders(\"c2\")\n    assert [o.order_id for o in orders] == [\"ord-0006\"]\n\n\ndef test_refund_invalid_amount_raises():\n    with pytest.raises(ValueError, match=\"INVALID_AMOUNT\"):\n        service.refund_order(\"ord-0002\", -1)\n    with pytest.raises(ValueError, match=\"INVALID_AMOUNT\"):\n        service.refund_order(\"ord-0002\", 1501)\n\n\ndef test_refund_only_paid_or_shipped():\n    with pytest.raises(ValueError, match=\"REFUND_NOT_ALLOWED\"):\n        service.refund_order(\"ord-0001\", 100)  # pending\n    assert service.refund_order(\"ord-0002\", 1500).order_id == \"ord-0002\"\n    assert service.refund_order(\"ord-0004\", 500).order_id == \"ord-0004\"\n",
+      "truncated": false
+    },
+    {
+      "path": "tests/conftest.py",
+      "cases": [],
+      "origin": "seekdb:test",
+      "file_sha256": "cfeb56573c321481",
+      "content": "import sys\nfrom pathlib import Path\n\nSRC = Path(__file__).resolve().parent.parent / \"src\"\nif str(SRC) not in sys.path:\n    sys.path.insert(0, str(SRC))\n",
+      "truncated": false
+    }
+  ],
+  "task_state": {
+    "available": true,
+    "records_found": 0,
+    "done": [],
+    "todo": [],
+    "results": {},
+    "note": "空状态：尚无该任务记录"
+  },
+  "retrieval": {
+    "engine": "seekdb",
+    "db_path": ".sdddata/seekdb.db",
+    "queries": [
+      {
+        "engine": "seekdb.hybrid_search",
+        "collection": "eng_docs",
+        "database_path": ".sdddata/seekdb.db",
+        "where": {
+          "kind": "spec"
+        },
+        "query": {
+          "where_document": {
+            "$contains": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+          }
+        },
+        "knn": {
+          "query_texts": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+        },
+        "rank": {
+          "rrf": {
+            "rank_window_size": 30,
+            "rank_constant": 20
+          }
+        },
+        "n_results": 8,
+        "returned_ids": [
+          "spec:specs/SPEC-order-core.md#(header)",
+          "spec:specs/SPEC-order-query.md#(header)",
+          "spec:specs/SPEC-order-query.md#ORD-001",
+          "spec:specs/SPEC-order-core.md#ORD-CORE-001",
+          "spec:specs/SPEC-refund-boundary.md#REF-001",
+          "spec:specs/SPEC-refund-boundary.md#REF-002",
+          "spec:specs/SPEC-refund-boundary.md#(header)",
+          "spec:specs/SPEC-order-query.md#ORD-002"
+        ]
+      },
+      {
+        "engine": "seekdb.hybrid_search",
+        "collection": "eng_docs",
+        "database_path": ".sdddata/seekdb.db",
+        "where": {
+          "kind": "code"
+        },
+        "query": {
+          "where_document": {
+            "$contains": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+          }
+        },
+        "knn": {
+          "query_texts": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+        },
+        "rank": {
+          "rrf": {
+            "rank_window_size": 30,
+            "rank_constant": 20
+          }
+        },
+        "n_results": 8,
+        "returned_ids": [
+          "code:src/order_service/service.py#0",
+          "code:src/order_service/repository.py#0",
+          "code:src/order_service/models.py#0",
+          "code:src/order_service/__init__.py#0"
+        ]
+      },
+      {
+        "engine": "seekdb.hybrid_search",
+        "collection": "eng_docs",
+        "database_path": ".sdddata/seekdb.db",
+        "where": {
+          "kind": "test"
+        },
+        "query": {
+          "where_document": {
+            "$contains": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+          }
+        },
+        "knn": {
+          "query_texts": "业务需求：客户成功团队需要在客服后台按“状态 + 金额下限”筛选订单。 请修改订单服务的查询能力，使其支持按订单状态与金额下限过滤（具体约束以“适用的规格条目”为准）， 并保证既有查询行为与兼容性约束不被破坏。"
+        },
+        "rank": {
+          "rrf": {
+            "rank_window_size": 30,
+            "rank_constant": 20
+          }
+        },
+        "n_results": 8,
+        "returned_ids": [
+          "test:tests/test_order_filter_target.py#0",
+          "test:tests/test_orders_regression.py#0",
+          "test:tests/conftest.py#0"
+        ]
+      },
+      {
+        "engine": "seekdb.get",
+        "where": {
+          "kind": "spec",
+          "source": "specs/SPEC-order-query.md"
+        },
+        "expanded": "ORD-003"
+      },
+      {
+        "engine": "seekdb.get",
+        "where": {
+          "kind": "spec",
+          "source": "specs/SPEC-order-core.md"
+        },
+        "expanded": "ORD-CORE-002"
+      },
+      {
+        "engine": "seekdb.get",
+        "where": {
+          "kind": "spec",
+          "source": "specs/SPEC-order-core.md"
+        },
+        "expanded": "ORD-CORE-003"
+      }
+    ]
+  },
+  "source_count_in_seekdb": 18,
+  "provenance": {
+    "checked": 15,
+    "missing": [],
+    "all_sources_exist": true
+  }
+}

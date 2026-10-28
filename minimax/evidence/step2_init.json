@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "data_dir": ".sdddata",
+  "db_path": ".sdddata/seekdb.db",
+  "collection": "eng_docs",
+  "docs": 0
+}

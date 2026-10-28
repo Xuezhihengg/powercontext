@@ -1,0 +1,16 @@
+$ /disk/chenlt/oceanbase/.venvs/mm/bin/python -m pytest tests/test_orders_regression.py -v --no-header -o addopts=
+(退出码 0)
+
+============================= test session starts ==============================
+collecting ... collected 8 items
+
+tests/test_orders_regression.py::test_create_and_fetch_order PASSED      [ 12%]
+tests/test_orders_regression.py::test_create_order_rejects_float_amount PASSED [ 25%]
+tests/test_orders_regression.py::test_list_orders_by_customer PASSED     [ 37%]
+tests/test_orders_regression.py::test_list_orders_empty_customer PASSED  [ 50%]
+tests/test_orders_regression.py::test_list_orders_ordering_stable PASSED [ 62%]
+tests/test_orders_regression.py::test_list_orders_positional_compat PASSED [ 75%]
+tests/test_orders_regression.py::test_refund_invalid_amount_raises PASSED [ 87%]
+tests/test_orders_regression.py::test_refund_only_paid_or_shipped PASSED [100%]
+
+============================== 8 passed in 0.02s ===============================

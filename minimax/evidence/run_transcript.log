@@ -1,0 +1,144 @@
+[07:37:00] == 1. PowerContext Server（18081；FRESH_PC=1）==
+PowerContext Server 已停止（任务状态保留在 .pcserver/home）
+[07:37:01]   已清空 PowerContext 数据目录 .pcserver/home，演示从空状态起步
+[07:37:07] $ sddctx --quiet state show --task-id T-001 --out evidence/step1_state_show_before.json   （预期非零退出）
+[sddctx] 写入 evidence/step1_state_show_before.json
+[07:37:07]   -> exit 3（预期 3 != 0）
+expected-fail exit 3: sddctx --quiet state show --task-id T-001 --out evidence/step1_state_show_before.json
+[07:37:07]   （step1 预期 exit 3：空状态——PowerContext 中尚无 T-001 记录）
+[07:37:07] == 2. 导入工程资料到 seekdb（规格 v1）==
+[07:37:07] $ sddctx --quiet init --data-dir .sdddata --out evidence/step2_init.json
+[sddctx] 写入 evidence/step2_init.json
+[07:37:13]   -> exit 0
+exit 0: sddctx --quiet init --data-dir .sdddata --out evidence/step2_init.json
+[07:37:13] $ sddctx --quiet ingest --project demo_project --data-dir .sdddata --out evidence/step2_ingest_specv1.json
+[sddctx] 写入 evidence/step2_ingest_specv1.json
+[07:37:25]   -> exit 0
+exit 0: sddctx --quiet ingest --project demo_project --data-dir .sdddata --out evidence/step2_ingest_specv1.json
+[07:37:25] == 3. 修改前测试基线（目标测试因功能未实现而失败，回归测试全过）==
+[07:37:25] $ sddctx --quiet verify --project demo_project --label before --out-dir evidence/logs --out evidence/step3_verify_before.json   （预期非零退出）
+[sddctx] 写入 evidence/logs/pytest_before_test_order_filter_target.log
+[sddctx] 写入 evidence/logs/pytest_before_test_orders_regression.log
+[sddctx] 写入 evidence/step3_verify_before.json
+[07:37:26]   -> exit 1（预期 1 != 0）
+expected-fail exit 1: sddctx --quiet verify --project demo_project --label before --out-dir evidence/logs --out evidence/step3_verify_before.json
+[07:37:26] == 4. v1 规格下的开发上下文（应检索不到 ORD-004/ORD-005）==
+[07:37:26] $ sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step4_context_specv1.json --markdown-out evidence/step4_context_specv1.md
+[sddctx] 写入 evidence/step4_context_specv1.json
+[sddctx] 写入 evidence/step4_context_specv1.md
+[07:37:32]   -> exit 0
+exit 0: sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step4_context_specv1.json --markdown-out evidence/step4_context_specv1.md
+[07:37:32] == 5. 规格更新为 v2 并重新导入（模拟 SDD 规格演进）==
+[07:37:32] $ cp -f samples/spec_update/SPEC-order-query.md demo_project/specs/SPEC-order-query.md
+[07:37:32] $ sddctx --quiet ingest --project demo_project --data-dir .sdddata --out evidence/step5_ingest_specv2.json
+[sddctx] 写入 evidence/step5_ingest_specv2.json
+[07:37:37]   -> exit 0
+exit 0: sddctx --quiet ingest --project demo_project --data-dir .sdddata --out evidence/step5_ingest_specv2.json
+[07:37:37] == 6. 更新后的开发上下文：必须出现 ORD-004/ORD-005 ==
+[07:37:37] $ sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step6_context_specv2.json --markdown-out evidence/step6_context_specv2.md
+[sddctx] 写入 evidence/step6_context_specv2.json
+[sddctx] 写入 evidence/step6_context_specv2.md
+[07:37:42]   -> exit 0
+exit 0: sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step6_context_specv2.json --markdown-out evidence/step6_context_specv2.md
+[07:37:42] == 7. 保存“规划阶段”任务状态到 PowerContext ==
+[07:37:42] $ sddctx --quiet state save --task-file samples/task-T001.md --title 订单查询支持状态与金额下限过滤 --phase planned --done 资料导入seekdb;规格v1与v2摄取;开发上下文生成 --todo MiniMax代码修改;修改后目标与回归验证;归档证据 --out evidence/step7_state_planned.json
+[sddctx] 写入 evidence/step7_state_planned.json
+[07:37:43]   -> exit 0
+exit 0: sddctx --quiet state save --task-file samples/task-T001.md --title 订单查询支持状态与金额下限过滤 --phase planned --done 资料导入seekdb;规格v1与v2摄取;开发上下文生成 --todo MiniMax代码修改;修改后目标与回归验证;归档证据 --out evidence/step7_state_planned.json
+[07:37:43] == 8. MiniMax 依据上下文完成一次实际代码修改 ==
+[07:37:43] $ sddctx --quiet patch --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step8_minimax_run.json --diff-out evidence/step8_code_diff.patch
+[sddctx] 写入 evidence/step8_minimax_run.json
+[sddctx] 写入 evidence/step8_code_diff.patch
+[07:38:45]   -> exit 0
+exit 0: sddctx --quiet patch --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step8_minimax_run.json --diff-out evidence/step8_code_diff.patch
+[07:38:45]    代码差异：evidence/step8_code_diff.patch（修改前文件另存于 .sdddata/backups/）
+[07:38:45] $ python3 scripts/snapshots.py evidence/step8_minimax_run.json evidence demo_project
+[snapshots] 写出 2 个文件；修改前快照来自 patcher 备份 .sdddata/backups/20261029-073845
+[07:38:45]   -> exit 0
+exit 0: python3 scripts/snapshots.py evidence/step8_minimax_run.json evidence demo_project
+[07:38:45] == 9. 修改后验证：目标测试 + 回归测试全部通过 ==
+[07:38:45] $ sddctx --quiet verify --project demo_project --label after --out-dir evidence/logs --out evidence/step9_verify_after.json
+[sddctx] 写入 evidence/logs/pytest_after_test_order_filter_target.log
+[sddctx] 写入 evidence/logs/pytest_after_test_orders_regression.log
+[sddctx] 写入 evidence/step9_verify_after.json
+[07:38:46]   -> exit 0
+exit 0: sddctx --quiet verify --project demo_project --label after --out-dir evidence/logs --out evidence/step9_verify_after.json
+[07:38:46] == 10. 把验证结果写回 PowerContext 任务状态 ==
+[07:38:46] $ sddctx --quiet state save --task-file samples/task-T001.md --title 订单查询支持状态与金额下限过滤 --phase verified --done 资料导入seekdb;规格v1与v2摄取;开发上下文生成;MiniMax代码修改;目标与回归测试全部通过 --todo 归档证据;提交评审 --results-file evidence/step9_verify_after.json --notes T-001 代码修改与验证完成（详见 evidence/step8-9） --out evidence/step10_state_verified.json
+[sddctx] 写入 evidence/step10_state_verified.json
+[07:38:46]   -> exit 0
+exit 0: sddctx --quiet state save --task-file samples/task-T001.md --title 订单查询支持状态与金额下限过滤 --phase verified --done 资料导入seekdb;规格v1与v2摄取;开发上下文生成;MiniMax代码修改;目标与回归测试全部通过 --todo 归档证据;提交评审 --results-file evidence/step9_verify_after.json --notes T-001 代码修改与验证完成（详见 evidence/step8-9） --out evidence/step10_state_verified.json
+[07:38:46] == 11. 重启上下文模块与 Server 后，新进程读取并复用任务状态 ==
+PowerContext Server 已停止（任务状态保留在 .pcserver/home）
+[07:38:47] $ scripts/stop_server.sh && scripts/start_server.sh（状态库不变）
+PowerContext Server: http://127.0.0.1:18081（就绪检查 /health/ready，超时 60s）
+  数据目录: /disk/chenlt/oceanbase/powercontext/minimax/.pcserver/home（日志 .pcserver/server.log）
+  ready
+[07:38:52] $ sddctx --quiet state show --task-id T-001 --out evidence/step11_state_show_after.json
+[sddctx] 写入 evidence/step11_state_show_after.json
+[07:38:52]   -> exit 0
+exit 0: sddctx --quiet state show --task-id T-001 --out evidence/step11_state_show_after.json
+[07:38:52] $ sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step11_context_final.json --markdown-out evidence/step11_context_final.md
+[sddctx] 写入 evidence/step11_context_final.json
+[sddctx] 写入 evidence/step11_context_final.md
+[07:38:57]   -> exit 0
+exit 0: sddctx --quiet context --project demo_project --data-dir .sdddata --task-file samples/task-T001.md --out evidence/step11_context_final.json --markdown-out evidence/step11_context_final.md
+[07:38:57] == 12. seekdb 检索演示（数据库实际参与上下文选择）==
+[07:38:57] $ sddctx --quiet dbq --data-dir .sdddata --kind spec --text 订单 状态 金额 过滤 --out evidence/step12_dbq_spec.json
+[sddctx] 写入 evidence/step12_dbq_spec.json
+[07:39:02]   -> exit 0
+exit 0: sddctx --quiet dbq --data-dir .sdddata --kind spec --text 订单 状态 金额 过滤 --out evidence/step12_dbq_spec.json
+[07:39:02] $ sddctx --quiet dbq --data-dir .sdddata --kind code --text list_orders 过滤 --out evidence/step12_dbq_code.json
+[sddctx] 写入 evidence/step12_dbq_code.json
+[07:39:07]   -> exit 0
+exit 0: sddctx --quiet dbq --data-dir .sdddata --kind code --text list_orders 过滤 --out evidence/step12_dbq_code.json
+[07:39:07] $ sddctx --quiet dbq --data-dir .sdddata --kind test --text filter status min_amount --out evidence/step12_dbq_test.json
+[sddctx] 写入 evidence/step12_dbq_test.json
+[07:39:12]   -> exit 0
+exit 0: sddctx --quiet dbq --data-dir .sdddata --kind test --text filter status min_amount --out evidence/step12_dbq_test.json
+[07:39:12] == 12b. seekdb 物理目录快照（证明检索发生在真实的数据库文件上）==
+[07:39:12]    已写入 evidence/step12_seekdb_dir.txt（seekdb 数据目录本身不入库，见 minimax/.gitignore）
+[07:39:12] == 完成。异常步骤数：0（step1 空状态、step3 修改前失败属预期，不计入）==
+[07:39:12] == 13. 验收自检：python3 scripts/check_evidence.py evidence demo_project ==
+  PASS  ① 能够运行：存在完整运行记录
+  PASS  ① 能够运行：流程结束时异常步骤数为 0
+  PASS  ② MiniMax 实际参与：存在 step8 调用记录
+  PASS  ② MiniMax 实际参与：请求发往 MiniMax 官方服务（非本地假端点）
+  PASS  ② MiniMax 实际参与：服务端返回 usage（真实 token 计量）
+  PASS  ② MiniMax 实际参与：保存了送模型的完整上下文
+  PASS  ② MiniMax 实际参与：保存了模型原始输出
+  PASS  ② MiniMax 实际参与：模型改动落到代码并生成 diff
+  PASS  ② MiniMax 实际参与：diff 文件存在且非空
+  PASS  ② MiniMax 实际参与：code_after/src/order_service/service.py 与工作区一致
+  PASS  ③ 上下文正确：step4/5/6 证据齐备
+  PASS  ③ 上下文正确：v1 上下文不含未发布的 ORD-004/ORD-005
+  PASS  ③ 上下文正确：规格更新重新导入后出现 ORD-004/ORD-005
+  PASS  ③ 上下文正确：既有规格在 v2 后仍作为约束保留
+  PASS  ③ 上下文正确：step4 来源全部可核对
+  PASS  ③ 上下文正确：step6 来源全部可核对
+  PASS  ③ 上下文正确：包含需修改的代码来源
+  PASS  ③ 上下文正确：包含目标与回归测试来源
+  PASS  ④ 数据库实际参与：seekdb 数据目录/文件存在且非空（或已固化为 step12_seekdb_dir.txt 快照）
+  PASS  ④ 数据库实际参与：上下文条目来自 seekdb 检索结果
+  PASS  ④ 数据库实际参与：seekdb 中确有资料块
+  PASS  ④ 数据库实际参与：dbq spec 查询有命中
+  PASS  ④ 数据库实际参与：dbq code 查询有命中
+  PASS  ④ 数据库实际参与：dbq test 查询有命中
+  PASS  ⑤ 状态能够复用：step7/10/11 证据齐备
+  PASS  ⑤ 状态能够复用：起步为空状态（无 T-001 记录）
+  PASS  ⑤ 状态能够复用：两个阶段的状态均已写入 PowerContext
+  PASS  ⑤ 状态能够复用：Scope 一致（跨进程同一存储）
+  PASS  ⑤ 状态能够复用：重启 Server 后新进程读到最新状态
+  PASS  ⑤ 状态能够复用：读到的状态被用于后续上下文
+  PASS  ⑤ 状态能够复用：上下文正文含「任务状态（来自 PowerContext）」段
+  PASS  ⑥ 代码修改有效：step3/step9 验证报告齐备
+  PASS  ⑥ 代码修改有效：修改前目标测试功能性失败
+  PASS  ⑥ 代码修改有效：失败不是环境错误
+  PASS  ⑥ 代码修改有效：修改前回归测试全过
+  PASS  ⑥ 代码修改有效：修改后目标测试全过
+  PASS  ⑥ 代码修改有效：修改后回归测试全过
+  PASS  ⑥ 代码修改有效：测试文件前后未被修改
+
+合计 38 项检查，未通过 0 项。
+[07:39:12]   -> check_evidence exit 0（0=6 项验收全部成立）
+[07:39:12]    证据目录：evidence/（transcript: evidence/run_transcript.log）

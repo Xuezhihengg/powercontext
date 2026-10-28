@@ -1,0 +1,45 @@
+{
+  "project": "demo_project",
+  "ran_at": "2026-10-29T07:37:26+08:00",
+  "suites": [
+    {
+      "label": "target",
+      "suite": "tests/test_order_filter_target.py",
+      "command": "/disk/chenlt/oceanbase/.venvs/mm/bin/python -m pytest tests/test_order_filter_target.py -v --no-header -o addopts=",
+      "cwd": "demo_project",
+      "started_at": "2026-10-29T07:37:26+08:00",
+      "exit_code": 1,
+      "passed": false,
+      "code_version_git": "3c4f720a",
+      "file_sha256": {
+        "tests/test_order_filter_target.py": "59dff46b97f3dd4f"
+      },
+      "output": "============================= test session starts ==============================\ncollecting ... collected 6 items\n\ntests/test_order_filter_target.py::test_filter_by_status FAILED          [ 16%]\ntests/test_order_filter_target.py::test_status_case_insensitive_and_trimmed FAILED [ 33%]\ntests/test_order_filter_target.py::test_status_empty_or_none_means_no_filter FAILED [ 50%]\ntests/test_order_filter_target.py::test_min_amount_filter FAILED         [ 66%]\ntests/test_order_filter_target.py::test_invalid_status_raises_error_code FAILED [ 83%]\ntests/test_order_filter_target.py::test_combined_filters_keep_deterministic_ordering FAILED [100%]\n\n=================================== FAILURES ===================================\n____________________________ test_filter_by_status _____________________________\n\n    def test_filter_by_status():\n        # ORD-004：status 过滤\n>       orders = service.list_orders(\"c1\", status=\"paid\")\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: list_orders() got an unexpected keyword argument 'status'\n\ntests/test_order_filter_target.py:23: TypeError\n___________________ test_status_case_insensitive_and_trimmed ___________________\n\n    def test_status_case_insensitive_and_trimmed():\n        # ORD-004：大小写不敏感、去除首尾空白\n>       assert _ids(service.list_orders(\"c1\", status=\" PAID \")) == _ids(service.list_orders(\"c1\", status=\"paid\"))\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: list_orders() got an unexpected keyword argument 'status'\n\ntests/test_order_filter_target.py:30: TypeError\n__________________ test_status_empty_or_none_means_no_filter ___________________\n\n    def test_status_empty_or_none_means_no_filter():\n        # ORD-004：空字符串或 None 表示不过滤（且仍满足 ORD-001 客户范围）\n        full = _ids(service.list_orders(\"c1\"))\n>       assert _ids(service.list_orders(\"c1\", status=\"\")) == full\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: list_orders() got an unexpected keyword argument 'status'\n\ntests/test_order_filter_target.py:36: TypeError\n____________________________ test_min_amount_filter ____________________________\n\n    def test_min_amount_filter():\n        # ORD-005：min_amount 按 total_amount（整型分）做包含式下限过滤\n>       orders = service.list_orders(\"c1\", min_amount=1000)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: list_orders() got an unexpected keyword argument 'min_amount'\n\ntests/test_order_filter_target.py:42: TypeError\n____________________ test_invalid_status_raises_error_code _____________________\n\n    def test_invalid_status_raises_error_code():\n        # ORD-005(边界)：非法 status 抛出含 INVALID_STATUS 的 ValueError，不得静默返回全部\n        with pytest.raises(ValueError, match=\"INVALID_STATUS\"):\n>           service.list_orders(\"c1\", status=\"archived\")\nE           TypeError: list_orders() got an unexpected keyword argument 'status'\n\ntests/test_order_filter_target.py:50: TypeError\n______________ test_combined_filters_keep_deterministic_ordering _______________\n\n    def test_combined_filters_keep_deterministic_ordering():\n        # ORD-004+ORD-005 组合，结果仍满足 ORD-001 客户范围与 ORD-003 稳定排序\n>       orders = service.list_orders(\"c1\", status=\"paid\", min_amount=1000)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: list_orders() got an unexpected keyword argument 'status'\n\ntests/test_order_filter_target.py:55: TypeError\n=========================== short test summary info ============================\nFAILED tests/test_order_filter_target.py::test_filter_by_status - TypeError: ...\nFAILED tests/test_order_filter_target.py::test_status_case_insensitive_and_trimmed\nFAILED tests/test_order_filter_target.py::test_status_empty_or_none_means_no_filter\nFAILED tests/test_order_filter_target.py::test_min_amount_filter - TypeError:...\nFAILED tests/test_order_filter_target.py::test_invalid_status_raises_error_code\nFAILED tests/test_order_filter_target.py::test_combined_filters_keep_deterministic_ordering\n============================== 6 failed in 0.04s ===============================\n"
+    },
+    {
+      "label": "regression",
+      "suite": "tests/test_orders_regression.py",
+      "command": "/disk/chenlt/oceanbase/.venvs/mm/bin/python -m pytest tests/test_orders_regression.py -v --no-header -o addopts=",
+      "cwd": "demo_project",
+      "started_at": "2026-10-29T07:37:26+08:00",
+      "exit_code": 0,
+      "passed": true,
+      "code_version_git": "3c4f720a",
+      "file_sha256": {
+        "tests/test_orders_regression.py": "ec429a7990a3522c"
+      },
+      "output": "============================= test session starts ==============================\ncollecting ... collected 8 items\n\ntests/test_orders_regression.py::test_create_and_fetch_order PASSED      [ 12%]\ntests/test_orders_regression.py::test_create_order_rejects_float_amount PASSED [ 25%]\ntests/test_orders_regression.py::test_list_orders_by_customer PASSED     [ 37%]\ntests/test_orders_regression.py::test_list_orders_empty_customer PASSED  [ 50%]\ntests/test_orders_regression.py::test_list_orders_ordering_stable PASSED [ 62%]\ntests/test_orders_regression.py::test_list_orders_positional_compat PASSED [ 75%]\ntests/test_orders_regression.py::test_refund_invalid_amount_raises PASSED [ 87%]\ntests/test_orders_regression.py::test_refund_only_paid_or_shipped PASSED [100%]\n\n============================== 8 passed in 0.02s ===============================\n"
+    }
+  ],
+  "all_passed": false,
+  "summary": {
+    "target:tests/test_order_filter_target.py": {
+      "exit_code": 1,
+      "passed": false
+    },
+    "regression:tests/test_orders_regression.py": {
+      "exit_code": 0,
+      "passed": true
+    }
+  }
+}

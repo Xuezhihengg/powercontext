@@ -1,0 +1,14 @@
+$ /disk/chenlt/oceanbase/.venvs/mm/bin/python -m pytest tests/test_order_filter_target.py -v --no-header -o addopts=
+(退出码 0)
+
+============================= test session starts ==============================
+collecting ... collected 6 items
+
+tests/test_order_filter_target.py::test_filter_by_status PASSED          [ 16%]
+tests/test_order_filter_target.py::test_status_case_insensitive_and_trimmed PASSED [ 33%]
+tests/test_order_filter_target.py::test_status_empty_or_none_means_no_filter PASSED [ 50%]
+tests/test_order_filter_target.py::test_min_amount_filter PASSED         [ 66%]
+tests/test_order_filter_target.py::test_invalid_status_raises_error_code PASSED [ 83%]
+tests/test_order_filter_target.py::test_combined_filters_keep_deterministic_ordering PASSED [100%]
+
+============================== 6 passed in 0.01s ===============================

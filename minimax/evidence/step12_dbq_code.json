@@ -1,0 +1,73 @@
+{
+  "query": {
+    "engine": "seekdb.hybrid_search",
+    "collection": "eng_docs",
+    "database_path": ".sdddata/seekdb.db",
+    "where": {
+      "kind": "code"
+    },
+    "query": {
+      "where_document": {
+        "$contains": "list_orders 过滤"
+      }
+    },
+    "knn": {
+      "query_texts": "list_orders 过滤"
+    },
+    "rank": {
+      "rrf": {
+        "rank_window_size": 30,
+        "rank_constant": 20
+      }
+    },
+    "n_results": 8,
+    "returned_ids": [
+      "code:src/order_service/repository.py#0",
+      "code:src/order_service/__init__.py#0",
+      "code:src/order_service/service.py#0",
+      "code:src/order_service/models.py#0"
+    ]
+  },
+  "hits": [
+    {
+      "id": "code:src/order_service/repository.py#0",
+      "metadata": {
+        "sha": "c14ec580efa2012a",
+        "kind": "code",
+        "chunk": 0,
+        "source": "src/order_service/repository.py",
+        "symbols": "InMemoryOrderRepository,__init__,next_created_at,add,get,list_by_customer"
+      }
+    },
+    {
+      "id": "code:src/order_service/__init__.py#0",
+      "metadata": {
+        "sha": "0d6eefddbd33635a",
+        "kind": "code",
+        "chunk": 0,
+        "source": "src/order_service/__init__.py",
+        "symbols": ""
+      }
+    },
+    {
+      "id": "code:src/order_service/service.py#0",
+      "metadata": {
+        "sha": "dcae378e938ed61b",
+        "kind": "code",
+        "chunk": 0,
+        "source": "src/order_service/service.py",
+        "symbols": "reset_repository,create_order,get_order,list_orders,refund_order"
+      }
+    },
+    {
+      "id": "code:src/order_service/models.py#0",
+      "metadata": {
+        "sha": "098b87a50eaad2dd",
+        "kind": "code",
+        "chunk": 0,
+        "source": "src/order_service/models.py",
+        "symbols": "Order,__post_init__"
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+$ /disk/chenlt/oceanbase/.venvs/mm/bin/python -m pytest tests/test_order_filter_target.py -v --no-header -o addopts=
+(退出码 1)
+
+============================= test session starts ==============================
+collecting ... collected 6 items
+
+tests/test_order_filter_target.py::test_filter_by_status FAILED          [ 16%]
+tests/test_order_filter_target.py::test_status_case_insensitive_and_trimmed FAILED [ 33%]
+tests/test_order_filter_target.py::test_status_empty_or_none_means_no_filter FAILED [ 50%]
+tests/test_order_filter_target.py::test_min_amount_filter FAILED         [ 66%]
+tests/test_order_filter_target.py::test_invalid_status_raises_error_code FAILED [ 83%]
+tests/test_order_filter_target.py::test_combined_filters_keep_deterministic_ordering FAILED [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_filter_by_status _____________________________
+
+    def test_filter_by_status():
+        # ORD-004：status 过滤
+>       orders = service.list_orders("c1", status="paid")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: list_orders() got an unexpected keyword argument 'status'
+
+tests/test_order_filter_target.py:23: TypeError
+___________________ test_status_case_insensitive_and_trimmed ___________________
+
+    def test_status_case_insensitive_and_trimmed():
+        # ORD-004：大小写不敏感、去除首尾空白
+>       assert _ids(service.list_orders("c1", status=" PAID ")) == _ids(service.list_orders("c1", status="paid"))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: list_orders() got an unexpected keyword argument 'status'
+
+tests/test_order_filter_target.py:30: TypeError
+__________________ test_status_empty_or_none_means_no_filter ___________________
+
+    def test_status_empty_or_none_means_no_filter():
+        # ORD-004：空字符串或 None 表示不过滤（且仍满足 ORD-001 客户范围）
+        full = _ids(service.list_orders("c1"))
+>       assert _ids(service.list_orders("c1", status="")) == full
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: list_orders() got an unexpected keyword argument 'status'
+
+tests/test_order_filter_target.py:36: TypeError
+____________________________ test_min_amount_filter ____________________________
+
+    def test_min_amount_filter():
+        # ORD-005：min_amount 按 total_amount（整型分）做包含式下限过滤
+>       orders = service.list_orders("c1", min_amount=1000)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: list_orders() got an unexpected keyword argument 'min_amount'
+
+tests/test_order_filter_target.py:42: TypeError
+____________________ test_invalid_status_raises_error_code _____________________
+
+    def test_invalid_status_raises_error_code():
+        # ORD-005(边界)：非法 status 抛出含 INVALID_STATUS 的 ValueError，不得静默返回全部
+        with pytest.raises(ValueError, match="INVALID_STATUS"):
+>           service.list_orders("c1", status="archived")
+E           TypeError: list_orders() got an unexpected keyword argument 'status'
+
+tests/test_order_filter_target.py:50: TypeError
+______________ test_combined_filters_keep_deterministic_ordering _______________
+
+    def test_combined_filters_keep_deterministic_ordering():
+        # ORD-004+ORD-005 组合，结果仍满足 ORD-001 客户范围与 ORD-003 稳定排序
+>       orders = service.list_orders("c1", status="paid", min_amount=1000)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: list_orders() got an unexpected keyword argument 'status'
+
+tests/test_order_filter_target.py:55: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_order_filter_target.py::test_filter_by_status - TypeError: ...
+FAILED tests/test_order_filter_target.py::test_status_case_insensitive_and_trimmed
+FAILED tests/test_order_filter_target.py::test_status_empty_or_none_means_no_filter
+FAILED tests/test_order_filter_target.py::test_min_amount_filter - TypeError:...
+FAILED tests/test_order_filter_target.py::test_invalid_status_raises_error_code
+FAILED tests/test_order_filter_target.py::test_combined_filters_keep_deterministic_ordering
+============================== 6 failed in 0.04s ===============================

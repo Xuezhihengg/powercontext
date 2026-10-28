@@ -1,0 +1,115 @@
+{
+  "query": {
+    "engine": "seekdb.hybrid_search",
+    "collection": "eng_docs",
+    "database_path": ".sdddata/seekdb.db",
+    "where": {
+      "kind": "spec"
+    },
+    "query": {
+      "where_document": {
+        "$contains": "订单 状态 金额 过滤"
+      }
+    },
+    "knn": {
+      "query_texts": "订单 状态 金额 过滤"
+    },
+    "rank": {
+      "rrf": {
+        "rank_window_size": 30,
+        "rank_constant": 20
+      }
+    },
+    "n_results": 8,
+    "returned_ids": [
+      "spec:specs/SPEC-order-query.md#(header)",
+      "spec:specs/SPEC-order-core.md#ORD-CORE-001",
+      "spec:specs/SPEC-refund-boundary.md#REF-001",
+      "spec:specs/SPEC-refund-boundary.md#REF-002",
+      "spec:specs/SPEC-order-core.md#(header)",
+      "spec:specs/SPEC-order-query.md#ORD-004",
+      "spec:specs/SPEC-order-query.md#ORD-005",
+      "spec:specs/SPEC-order-query.md#ORD-001"
+    ]
+  },
+  "hits": [
+    {
+      "id": "spec:specs/SPEC-order-query.md#(header)",
+      "metadata": {
+        "sha": "839db4d1869c5c10",
+        "kind": "spec",
+        "req_id": "(header)",
+        "source": "specs/SPEC-order-query.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-order-core.md#ORD-CORE-001",
+      "metadata": {
+        "sha": "c554f606dcf31ecd",
+        "kind": "spec",
+        "title": "状态枚举",
+        "req_id": "ORD-CORE-001",
+        "source": "specs/SPEC-order-core.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-refund-boundary.md#REF-001",
+      "metadata": {
+        "sha": "f7119b4456db80ad",
+        "kind": "spec",
+        "title": "退款金额边界",
+        "req_id": "REF-001",
+        "source": "specs/SPEC-refund-boundary.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-refund-boundary.md#REF-002",
+      "metadata": {
+        "sha": "68ef60dceb89f583",
+        "kind": "spec",
+        "title": "退款状态限制",
+        "req_id": "REF-002",
+        "source": "specs/SPEC-refund-boundary.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-order-core.md#(header)",
+      "metadata": {
+        "sha": "0a6678a7b2be0154",
+        "kind": "spec",
+        "req_id": "(header)",
+        "source": "specs/SPEC-order-core.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-order-query.md#ORD-004",
+      "metadata": {
+        "sha": "e96cd39e428de246",
+        "kind": "spec",
+        "title": "状态与金额下限过滤（v2 新增）",
+        "req_id": "ORD-004",
+        "source": "specs/SPEC-order-query.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-order-query.md#ORD-005",
+      "metadata": {
+        "sha": "ebd314c51b44b4c7",
+        "kind": "spec",
+        "title": "非法状态拒绝（v2 新增）",
+        "req_id": "ORD-005",
+        "source": "specs/SPEC-order-query.md"
+      }
+    },
+    {
+      "id": "spec:specs/SPEC-order-query.md#ORD-001",
+      "metadata": {
+        "sha": "c7ca2ba13dffc148",
+        "kind": "spec",
+        "title": "按客户查询",
+        "req_id": "ORD-001",
+        "source": "specs/SPEC-order-query.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+时间: 2026-10-29T07:39:12+08:00
+$ realpath .sdddata
+/disk/chenlt/oceanbase/powercontext/minimax/.sdddata
+$ du -sh .sdddata
+567M	.sdddata
+$ du -sh .sdddata/seekdb.db
+567M	.sdddata/seekdb.db
+$ find .sdddata/seekdb.db -type f | wc -l
+23
+$ find .sdddata -maxdepth 2 | head -25
+.sdddata
+.sdddata/seekdb.db
+.sdddata/seekdb.db/run
+.sdddata/seekdb.db/etc
+.sdddata/seekdb.db/log
+.sdddata/seekdb.db/store
+.sdddata/backups
+.sdddata/backups/20261029-073845
+.sdddata/manifest.json
+$ find .sdddata/seekdb.db -type f -size +100k -printf 字节+路径 | sort -rn | head -8
+268437036	.sdddata/seekdb.db/log/seekdb.log.20261029073738657
+123999093	.sdddata/seekdb.db/log/seekdb.log
+67108864	.sdddata/seekdb.db/store/sstable/block_file
+67108864	.sdddata/seekdb.db/store/redo/sys/log_stream/meta/0
+67108864	.sdddata/seekdb.db/store/redo/sys/log_stream/log/0
+$ python3 -c ... manifest.json 概览
+manifest 顶层键: ['spec:specs/SPEC-order-core.md#(header)', 'spec:specs/SPEC-order-core.md#ORD-CORE-001', 'spec:specs/SPEC-order-core.md#ORD-CORE-002', 'spec:specs/SPEC-order-core.md#ORD-CORE-003', 'spec:specs/SPEC-order-query.md#(header)', 'spec:specs/SPEC-order-query.md#ORD-001', 'spec:specs/SPEC-order-query.md#ORD-002', 'spec:specs/SPEC-order-query.md#ORD-003']
+条目数: 20

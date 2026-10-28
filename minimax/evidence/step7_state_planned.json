@@ -1,0 +1,40 @@
+{
+  "status": "saved",
+  "scope_id": "scp_3bp5nwk30wq4xx3qjpf5r7ypjj",
+  "request_text": "{\"task_id\":\"T-001\",\"title\":\"订单查询支持状态与金额下限过滤\",\"phase\":\"planned\",\"done\":[\"资料导入seekdb\",\"规格v1与v2摄取\",\"开发上下文生成\"],\"todo\":[\"MiniMax代码修改\",\"修改后目标与回归验证\",\"归档证据\"],\"results\":{},\"notes\":\"\",\"updated_at\":\"2026-10-29T07:37:42+08:00\"}",
+  "response": {
+    "changed": true,
+    "records": [
+      {
+        "artifact": {
+          "family": "atomic-memory",
+          "artifact_id": "art_1349287623444008bad2495be4bb4774",
+          "revision": 1
+        },
+        "kind": "task_state",
+        "text": "{\"task_id\":\"T-001\",\"title\":\"订单查询支持状态与金额下限过滤\",\"phase\":\"planned\",\"done\":[\"资料导入seekdb\",\"规格v1与v2摄取\",\"开发上下文生成\"],\"todo\":[\"MiniMax代码修改\",\"修改后目标与回归验证\",\"归档证据\"],\"results\":{},\"notes\":\"\",\"updated_at\":\"2026-10-29T07:37:42+08:00\"}",
+        "state": "active",
+        "state_version": 0,
+        "merged_into_id": null
+      }
+    ]
+  },
+  "record": {
+    "task_id": "T-001",
+    "title": "订单查询支持状态与金额下限过滤",
+    "phase": "planned",
+    "done": [
+      "资料导入seekdb",
+      "规格v1与v2摄取",
+      "开发上下文生成"
+    ],
+    "todo": [
+      "MiniMax代码修改",
+      "修改后目标与回归验证",
+      "归档证据"
+    ],
+    "results": {},
+    "notes": "",
+    "updated_at": "2026-10-29T07:37:42+08:00"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "query": {
+    "engine": "seekdb.hybrid_search",
+    "collection": "eng_docs",
+    "database_path": ".sdddata/seekdb.db",
+    "where": {
+      "kind": "test"
+    },
+    "query": {
+      "where_document": {
+        "$contains": "filter status min_amount"
+      }
+    },
+    "knn": {
+      "query_texts": "filter status min_amount"
+    },
+    "rank": {
+      "rrf": {
+        "rank_window_size": 30,
+        "rank_constant": 20
+      }
+    },
+    "n_results": 8,
+    "returned_ids": [
+      "test:tests/test_order_filter_target.py#0",
+      "test:tests/conftest.py#0",
+      "test:tests/test_orders_regression.py#0"
+    ]
+  },
+  "hits": [
+    {
+      "id": "test:tests/test_order_filter_target.py#0",
+      "metadata": {
+        "sha": "59dff46b97f3dd4f",
+        "kind": "test",
+        "chunk": 0,
+        "source": "tests/test_order_filter_target.py",
+        "symbols": "_fixtures,_ids,test_filter_by_status,test_status_case_insensitive_and_trimmed,test_status_empty_or_none_means_no_filter,test_min_amount_filter,test_invalid_status_raises_error_code,test_combined_filters_keep_deterministic_ordering"
+      }
+    },
+    {
+      "id": "test:tests/conftest.py#0",
+      "metadata": {
+        "sha": "cfeb56573c321481",
+        "kind": "test",
+        "chunk": 0,
+        "source": "tests/conftest.py",
+        "symbols": ""
+      }
+    },
+    {
+      "id": "test:tests/test_orders_regression.py#0",
+      "metadata": {
+        "sha": "ec429a7990a3522c",
+        "kind": "test",
+        "chunk": 0,
+        "source": "tests/test_orders_regression.py",
+        "symbols": "_fixtures,test_create_and_fetch_order,test_create_order_rejects_float_amount,test_list_orders_by_customer,test_list_orders_empty_customer,test_list_orders_ordering_stable,test_list_orders_positional_compat,test_refund_invalid_amount_raises,test_refund_only_paid_or_shipped"
+      }
+    }
+  ]
+}

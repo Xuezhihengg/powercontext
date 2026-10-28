@@ -1,0 +1,11 @@
+{
+  "collection": "eng_docs",
+  "db_path": ".sdddata/seekdb.db",
+  "docs_total": 20,
+  "added": 2,
+  "updated": 1,
+  "unchanged": 17,
+  "removed": 0,
+  "count_in_seekdb": 20,
+  "status": "ok"
+}
