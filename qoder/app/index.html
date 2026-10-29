@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知栈 StudyStack</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1>知栈 StudyStack</h1>
+      <div class="header-right">
+        <span id="model-badge" class="model-badge" style="display:none"></span>
+        <span id="status-bar">就绪</span>
+      </div>
+    </header>
+    <nav id="nav">
+      <button class="nav-btn active" data-tab="courses">课程管理</button>
+      <button class="nav-btn" data-tab="import">导入笔记</button>
+      <button class="nav-btn" data-tab="search">检索复习</button>
+      <button class="nav-btn" data-tab="review">薄弱点</button>
+    </nav>
+    <main id="main">
+      <section id="tab-courses" class="tab-content active"></section>
+      <section id="tab-import" class="tab-content"></section>
+      <section id="tab-search" class="tab-content"></section>
+      <section id="tab-review" class="tab-content"></section>
+    </main>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "studystack",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"node server/index.mjs\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/index.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.5",
+    "concurrently": "^9.2.5",
+    "cors": "^2.8.6",
+    "express": "^4.22.3",
+    "seekdb": "1.4.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5"
+  }
+}
